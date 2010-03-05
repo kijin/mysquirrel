@@ -1,0 +1,115 @@
+
+MySquirrel : Protect PHP and MySQL against injection attacks!
+=============================================================
+
+Good old mysql_* functions are among the most commonly used in everyday PHP,
+but they are rather difficult to protect against SQL injection attacks.
+Injection-proofing often involves tedious escaping, yet a single parameter
+left unescaped by accident is all it takes for a cracker to pwn your database.
+More modern extensions that allow for prepared statements and/or parameterized
+queries, such as MySQLi and PDO, are not always available with shared hosting.
+
+MySquirrel is a lightweight object-oriented wrapper around mysql_* functions.
+It simulates parameterized queries by disallowing the execution of multiple
+statements and automatically escaping (separately supplied) arguments. It also
+supplies a few missing functions, such as beginTransaction() and commit().
+
+MySquirrel does not magically make your application secure. Improper use would
+leave your site just as vulnerable to SQL injection attacks as if you didn't
+use MySquirrel. However, with proper use, it should be nearly impossible for a
+remote attacker to pull off a successful SQL injection.
+
+MySquirrel is released under the GNU General Public License (GPL), version 3.
+See the enclosed LICENSE file for the full terms and conditions.
+
+
+Quick Start Guide
+=================
+
+    include('mysquirrel.php');
+    
+    $mysql = MySquirrel::connect('localhost', 'user', 'pass', 'database');
+    $mysql->paranoid();
+    
+    $mysql->query('INSERT INTO users (name, password, email) VALUES (?, ?, ?)',
+        $name, $password, $email);
+    $id = $mysql->lastInsertID();
+    
+    $mysql->query('UPDATE users SET email = ? WHERE id = ?', $new_email, $id);
+
+    $result = $mysql->query('SELECT * FROM users WHERE id = ?', $id);
+    while ($row = $result->fetch()) {
+        echo $row['name'];
+    }
+    
+
+Explanation for the Above
+=========================
+  
+    MySquirrel::connect() returns an object. You call methods on this object
+    to interact with the MySQL connection. For example, instead of calling
+    mysql_query(), you would call $mysql->query() or something like that.
+    
+    Never, ever put variables into the querystring. Remote attackers love you
+    for mixing variables with SQL. Instead, put a question mark (?) where you
+    would normally put a variable. Then supply the variable itself as additional
+    arguments when you call query(). You can supply as many variables as you
+    want in this way, but the number of additional arguments must match the
+    number of placeholders in the querystring. MySquirrel will automatically
+    escape all parameters supplied using this syntax.
+    
+    In addition, query() will not accept querystrings that contain multiple
+    SQL statements. Only one statement is permitted per method call. This helps
+    prevent malicious folks from attaching "DELETE FROM ..." to the end of the
+    querystring. If you need to execute several statements at the same time,
+    use rawQuery() instead, which however is a dangerous thing to do.
+    
+    Paranoid mode, which can be activated by calling paranoid(), makes two
+    changes to MySquirrel's behavior. First, it disables rawQuery(). Second, it
+    makes query() refuse to execute any querystring with a quotation mark in it.
+    This will also prevent you from using string literals in your querystrings,
+    such as "SELECT * FROM tickets WHERE status = 'pending' ... " among others.
+    Although string literals are not necessarily insecure, in practice, a lot
+    of these originate from untrusted sources. Paranoid mode helps reinforce
+    good programming practices in exchange for a little inconvenience.
+    
+    If your query has a result set (e.g. "SELECT", "SHOW", "DESCRIBE", etc.)
+    then query() will give you an instance of MySquirrelResult. You can fetch
+    rows and other information about the result set by calling methods such as
+    fetch(), fetchObject(), and numRows() on this object. See below for more.
+    
+    Unlike mysql_* functions, MySquirrel will not allow errors to pass silently.
+    Nor will it follow the chickenheaded practice of die()'ing on any error.
+    If any error occurs, an instance of MySquirrelException will be thrown.
+    It is your responsibility to catch and handle this exception properly.
+
+
+MySquirrel Class : Static Methods
+=================================
+
+    connect($host, $user, $pass, $database, [$charset] )
+
+
+MySquirrel Class : Instance Methods
+===================================
+    
+    paranoid()
+    query($querystring, [$param1, $param2 ... ] )
+    rawQuery($querystring)          // Equivalent to mysql_query()
+    affectedRows()                  // Equivalent to mysql_affected_rows()
+    lastInsertID()                  // Equivalent to mysql_insert_id()
+    beginTransactiion()             // Only with InnoDB
+    commit()                        // Only with InnoDB
+    rollback()                      // Only with InnoDB
+
+
+MySquirrelResult : Methods
+==========================
+    
+    fetch($type = MYSQL_BOTH)       // Equivalent to mysql_fetch_array()
+    fetchAssoc()                    // Equivalent to mysql_fetch_assoc()
+    fetchObject($class, $params)    // Equivalent to mysql_fetch_object()
+    fetchRow()                      // Equivalent to mysql_fetch_row()
+    fieldInfo($offset)              // Combines all mysql_field_* functions
+    numFields()                     // Equivalent to mysql_num_fields()
+    numRows()                       // Equivalent to mysql_num_rows()
