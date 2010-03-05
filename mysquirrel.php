@@ -137,7 +137,14 @@ class MySquirrel
         {
             $param = $params[$i];
             if (get_magic_quotes_runtime()) $param = stripslashes($param);
-            $queryparts[$i] .= "'" . mysql_real_escape_string($param, $this->connection) . "'";
+            if (is_numeric($param))
+            {
+                $queryparts[$i] .= $param;
+            }
+            else
+            {
+                $queryparts[$i] .= "'" . mysql_real_escape_string($param, $this->connection) . "'";
+            }
         }
         $querystring = implode('', $queryparts);
         
