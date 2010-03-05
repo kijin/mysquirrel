@@ -130,21 +130,14 @@ class MySquirrel
             throw new MySquirrelException('Querystring has ' . $count . ' placeholders, but ' . count($params) . ' parameters given.');
         }
         
-        // Escape all the parameters, and surround them with quotes.
-        
-        $clean = array();
-        foreach ($params as $param)
-        {
-            if (get_magic_quotes_runtime()) $param = stripslashes($param);
-            $clean[] = "'" . mysql_real_escape_string($param, $this->connection) . "'";
-        }
-        
-        // Replace all placeholders with parameter values.
+        // Replace all placeholders with properly escaped parameter values.
         
         $queryparts = explode('?', $querystring);
         for ($i = 0; $i < $count; $i++)
         {
-            $queryparts[$i] .= $clean[$i];
+            $param = $params[$i];
+            if (get_magic_quotes_runtime()) $param = stripslashes($param);
+            $queryparts[$i] .= "'" . mysql_real_escape_string($param, $this->connection) . "'";
         }
         $querystring = implode('', $queryparts);
         
