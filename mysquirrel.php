@@ -311,6 +311,15 @@ class MySquirrelResult
         return mysql_fetch_row($this->result);
     }
     
+    // Fetch-all method.
+    
+    public function fetchAll()
+    {
+        $return = array();
+        while ($row = mysql_fetch_assoc($this->result)) $return[] = $row;
+        return $return;
+    }
+    
     // Get field info.
     
     public function fieldInfo($offset)

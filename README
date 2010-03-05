@@ -126,6 +126,7 @@ MySquirrelResult : Methods
     fetchAssoc()                    // Equivalent to mysql_fetch_assoc()
     fetchObject($class, $params)    // Equivalent to mysql_fetch_object()
     fetchRow()                      // Equivalent to mysql_fetch_row()
+    fetchAll()                      // Returns the entire result set as an array
     fieldInfo($offset)              // Combines all mysql_field_* functions
     numFields()                     // Equivalent to mysql_num_fields()
     numRows()                       // Equivalent to mysql_num_rows()
