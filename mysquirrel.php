@@ -55,7 +55,7 @@ class MySquirrel
         
         if ($charset !== false)
         {
-            if (version_compare(PHP_VERSION, '5.2.3', '>='))
+            if (version_compare(PHP_VERSION, '5.2.3', '<'))
             {
                 $chs = @mysql_query('SET NAMES ' . mysql_real_escape_string($charset, $con), $con);
             }
