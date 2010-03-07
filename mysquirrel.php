@@ -142,9 +142,9 @@ class MySquirrelDriver_MySQLi
         
         // If in paranoid mode, refuse to execute querystrings with quotes in them.
         
-        if ($this->paranoid && (strpos($querystring, '\'') !== false || strpos($querystring, '"') !== false))
+        if ($this->paranoid && (strpos($querystring, '\'') !== false || strpos($querystring, '"') !== false || strpos($querystring, '--') !== false))
         {
-            throw new MySquirrelException('You are using paranoid mode. You are not allowed to use querystrings with quotes in them.');
+            throw new MySquirrelException('While in paranoid mode, you cannot use querystrings with quotes or comments in them.');
         }
         
         // Get all parameters.
@@ -377,9 +377,9 @@ class MySquirrelDriver_MySQL
         
         // If in paranoid mode, refuse to execute querystrings with quotes in them.
         
-        if ($this->paranoid && (strpos($querystring, '\'') !== false || strpos($querystring, '"') !== false))
+        if ($this->paranoid && (strpos($querystring, '\'') !== false || strpos($querystring, '"') !== false || strpos($querystring, '--') !== false))
         {
-            throw new MySquirrelException('You are using paranoid mode. You are not allowed to use querystrings with quotes in them.');
+            throw new MySquirrelException('While in paranoid mode, you cannot use querystrings with quotes or comments in them.');
         }
         
         // Get all parameters.
