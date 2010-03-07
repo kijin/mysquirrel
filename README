@@ -26,7 +26,15 @@ queries by default, and by automatically escaping arguments. All you need to
 do is to pass potentially unsafe values as additional parameters to query().
 This is many times more convenient than escaping each of them manually, and
 absolutely fabulous compared to MySQLi's tedious process of binding variables.
-Where traditional MySQL functions lack proper error handling, MySquirrel adds
+
+MySquirrel also allows you to use prepared statements with ease, even where
+outdated mysql_* functions are all that you have. Unlike parameterized queries,
+prepared statements are not merely simulated by the client but actually run on
+the server-side. By using prepared statements, you can get extra security and
+also gain performance when inserting a large number of records.
+
+Other features include easy transaction control (only on InnoDB) and error
+handling. Where MySQL(i) functions lack proper error handling, MySquirrel adds
 PDO-style exceptions to aid debugging and to enforce good coding style.
 
 MySquirrel, however, does not magically make your application secure. Improper
@@ -48,16 +56,21 @@ Quick Start Guide
     $mysql = MySquirrel::connect('localhost', 'user', 'pass', 'database');
     $mysql->paranoid();
     
-    $mysql->query('INSERT INTO users (name, password, email) VALUES (?, ?, ?)',
-        $name, $password, $email);
-    $id = $mysql->lastInsertID();
-    
-    $mysql->query('UPDATE users SET email = ? WHERE id = ?', $new_email, $id);
-
     $result = $mysql->query('SELECT * FROM users WHERE id = ?', $id);
     while ($row = $result->fetch()) {
         echo $row['name'];
     }
+
+    $mysql->query('UPDATE users SET email = ? WHERE id = ?', $new_email, $id);
+
+    $mysql->query('INSERT INTO users (name, password, email) VALUES (?, ?, ?)',
+        $name, $password, $email);
+    $id = $mysql->lastInsertID();
+    
+    $stmt = $mysql->prepare('INSERT INTO users VALUES (null, ?, ?, ?)');
+    $stmt->execute($name, $password, $email);
+    $stmt->execute($name, $password, $email);
+    $stmt->execute($name, $password, $email);
     
 
 Explanation of the Above
@@ -106,6 +119,11 @@ Explanation of the Above
     rows and other information about the result set by calling methods such as
     fetch(), fetchAll(), and numRows() on this object. See below for more.
     
+    Prepared queries are executed in two steps. First, you call prepare() to
+    create a prepared statement on the server (requires MySQL 4.1 or higher).
+    Then, you call execute() on the returned object as many times as you want.
+    This improves performance when running the same query over and over again.
+    
     Unlike mysql_* functions, MySquirrel will not allow errors to pass silently.
     Nor will it follow the dickheaded practice of just die()'ing on any error.
     If any error occurs, an instance of MySquirrelException will be thrown.
@@ -115,14 +133,14 @@ Explanation of the Above
     goes to great lengths to remedy the situation where possible.
 
 
-MySquirrel Class : Static Methods
-=================================
+MySquirrel (Static)
+===================
 
     connect($host, $user, $pass, $database, [$charset] )
 
 
-MySquirrel Class : Instance Methods
-===================================
+MySquirrelDriver
+================
     
     paranoid()
     query($querystring, [$param1, $param2 ... ] )
@@ -134,8 +152,14 @@ MySquirrel Class : Instance Methods
     rollback()                      // Only with InnoDB.
 
 
-MySquirrelResult : Methods
-==========================
+MySquirrelPreparedStmt
+======================
+
+    execute( [$param1, $param2 ... ] )
+
+
+MySquirrelResult
+================
     
     fetch()                         // Returns both types of arrays.
     fetchAssoc()                    // Returns an associative array.
