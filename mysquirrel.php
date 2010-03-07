@@ -67,9 +67,30 @@ class MySquirrel
     private static $handles = array();
 }
 
+
+/**
+ * Drivers for various MySQL extensions.
+ * 
+ * Regardless of the underlying extension, all drivers expose the same public
+ * methods. The user does not need to care which driver is in use.
+ */
+
+interface MySquirrelDriver
+{
+    public function __construct($host, $user, $pass, $database, $charset = false);
+    public function paranoid();
+    public function query($querystring);
+    public function rawQuery($querystring);
+    public function affectedRows();
+    public function lastInsertID();
+    public function beginTransaction();
+    public function commit();
+    public function rollback();
+}
+
 // MySquirrel Driver for MySQLi.
 
-class MySquirrelDriver_MySQLi
+class MySquirrelDriver_MySQLi implements MySquirrelDriver
 {
     // Instance-specific private properties.
     
@@ -297,7 +318,7 @@ class MySquirrelDriver_MySQLi
 
 // MySquirrel driver for MySQL_* functions.
 
-class MySquirrelDriver_MySQL
+class MySquirrelDriver_MySQL implements MySquirrelDriver
 {
     // Instance-specific private properties.
     
@@ -530,9 +551,33 @@ class MySquirrelDriver_MySQL
     }
 }
 
+
+/**
+ * Result classes for various MySQL extensions.
+ * 
+ * Regardless of the underlying extension, all result classes expose the same
+ * public methods. The user does not need to care which driver is in use.
+ * One exception is the fieldInfo() method which, when using MySQLi, may return
+ * more than the minumal set of values returned by MySQL. If portability is a
+ * concern, do not rely on these extra values.
+ */
+
+interface MySquirrelResult
+{
+    public function __construct($result);
+    public function fetch();
+    public function fetchAssoc();
+    public function fetchObject($class_name = false, $params = array());
+    public function fetchRow();
+    public function fetchAll();
+    public function fieldInfo($offset);
+    public function numFields();
+    public function numRows();
+}
+
 // MySquirrel result class for MySQLi.
 
-class MySquirrelResult_MySQLi
+class MySquirrelResult_MySQLi implements MySquirrelResult
 {
     // Constructor.
     
@@ -550,9 +595,9 @@ class MySquirrelResult_MySQLi
     
     // Fetch method (generic).
     
-    public function fetch($type = MYSQLI_BOTH)
+    public function fetch()
     {
-        return $this->result->fetch_array($type);
+        return $this->result->fetch_array(MYSQLI_BOTH);
     }
 
     // Fetch method (returns associated array).
@@ -623,7 +668,7 @@ class MySquirrelResult_MySQLi
 
 // MySquirrel result class for MySQL_* functions.
 
-class MySquirrelResult_MySQL
+class MySquirrelResult_MySQL implements MySquirrelResult
 {
     // Constructor.
     
@@ -641,9 +686,9 @@ class MySquirrelResult_MySQL
     
     // Fetch method (generic).
     
-    public function fetch($type = MYSQL_BOTH)
+    public function fetch()
     {
-        return mysql_fetch_array($this->result, $type);
+        return mysql_fetch_array($this->result, MYSQL_BOTH);
     }
 
     // Fetch method (returns associated array).
@@ -711,7 +756,13 @@ class MySquirrelResult_MySQL
     }
 }
 
-// MySquirrel exception class. If your code is lousy, you'll see a lot of these.
+
+/**
+ * MySquirrel exception class.
+ * 
+ * No error passes silently. If your code is lousy, you'll see a lot of these.
+ * It is your responsibility to handle these exceptions in an appropriate way.
+ */
 
 class MySquirrelException extends Exception
 {
