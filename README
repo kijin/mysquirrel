@@ -129,19 +129,19 @@ MySquirrel Class : Instance Methods
     rawQuery($querystring)
     affectedRows()
     lastInsertID()
-    beginTransactiion()
-    commit()
-    rollback()
+    beginTransactiion()             // Only with InnoDB.
+    commit()                        // Only with InnoDB.
+    rollback()                      // Only with InnoDB.
 
 
 MySquirrelResult : Methods
 ==========================
     
-    fetch($type = MYSQL_BOTH)
-    fetchAssoc()
-    fetchObject($class, $params)
-    fetchRow()
-    fetchAll()
+    fetch()                         // Returns both types of arrays.
+    fetchAssoc()                    // Returns an associative array.
+    fetchObject($class, $params)    // Returns an object.
+    fetchRow()                      // Returns an enumerated array.
+    fetchAll()                      // Returns every row in the result set.
     fieldInfo($offset)
     numFields()
     numRows()
