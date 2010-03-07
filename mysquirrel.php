@@ -10,7 +10,7 @@
  * @copyright  (c) 2010, Kijin Sung <kijinbear@gmail.com>
  * @license    GPL v3 <http://www.opensource.org/licenses/gpl-3.0.html>
  * @link       http://github.com/kijin/mysquirrel
- * @version    0.1.0
+ * @version    0.2.0
  * 
  * -----------------------------------------------------------------------------
  * 
@@ -41,67 +41,90 @@ class MySquirrel
         // Check if the same connection object is already cached.
         
         $identifier = md5("$host::$user::$pass::$database");
-        if (isset(self::$instances[$identifier])) return self::$instances[$identifier];
+        if (isset(self::$handles[$identifier])) return self::$handles[$identifier];
         
-        // Connect.
+        // Cache and return an instance of MySquirrelDriver_*.
         
-        $con = @mysql_connect($host, $user, $pass);
-        if (!$con) throw new MySquirrelException('Could not connect to ' . $host . '.');
-        
-        $sdb = @mysql_select_db($database, $con);
-        if (!$sdb) throw new MySquirrelException('Could not select database ' . $database . '.');
-        
-        // Select charset (only available in MySQL 5.0.7+).
-        
-        if ($charset !== false)
-        {
-            if (version_compare(PHP_VERSION, '5.2.3', '<'))
-            {
-                $chs = @mysql_query('SET NAMES ' . mysql_real_escape_string($charset, $con), $con);
-            }
-            else
-            {
-                $chs = @mysql_set_charset($charset, $con);
-            }
-            if (!$chs) throw new MySquirrelException('Could not set charset to ' . $charset . '.');
-        }
-        
-        // Cache and return an instance of MySquirrel.
-        
-        return self::$instances[$identifier] = new MySquirrel($con);
+        return self::$handles[$identifier] = new MySquirrelDriver_MySQL($host, $user, $pass, $database, $charset = false);
     }
     
-    // Instances are cached here.
+    // Database handles are cached here.
     
-    private static $instances = array();
+    private static $handles = array();
+}
+
+// MySquirrel driver for MySQL_* functions.
+
+class MySquirrelDriver_MySQL
+{
+    // Instance-specific private properties.
+    
+    private $host;
+    private $user;
+    private $pass;
+    private $database;
+    private $charset;
+    private $connection = false;
+    private $paranoid = false;
     
     // Constructor.
     
-    private function __construct($connection)
+    public function __construct($host, $user, $pass, $database, $charset = false)
     {
-        // Connection resource is passed from connect().
+        // Store parameters as private properties.
         
-        $this->connection = $connection;
+        $this->host = $host;
+        $this->user = $user;
+        $this->pass = $pass;
+        $this->database = $database;
+        $this->charset = $charset;
     }
-    
-    // Instance-specific private properties.
-    
-    private $connection = null;
-    private $paranoid = false;
     
     // Paranoid method.
     
     public function paranoid()
     {
-        // When in paranoid mode, raw queries are disallowed, and quotes in queries are not permitted.
+        // When in paranoid mode, raw queries are disabled, and quotes in queries are not permitted.
         
         return $this->paranoid = true;
+    }
+    
+    // Connect method (private).
+    
+    private function connect()
+    {
+        // Connect.
+        
+        $this->connection = @mysql_connect($this->host, $this->user, $this->pass);
+        if (!$this->connection) throw new MySquirrelException('Could not connect to ' . $this->host . '.');
+        
+        $select_db = @mysql_select_db($this->database, $this->connection);
+        if (!$select_db) throw new MySquirrelException('Could not select database ' . $this->database . '.');
+        
+        // Select charset (only available in MySQL 5.0.7+).
+        
+        if ($this->charset !== false)
+        {
+            if (version_compare(PHP_VERSION, '5.2.3', '>='))
+            {
+                $select_charset = @mysql_set_charset($this->charset, $this->connection);
+            }
+            else
+            {
+                $select_charset = @mysql_query('SET NAMES ' . mysql_real_escape_string($this->charset, $this->connection), $this->connection);
+            }
+            if (!$select_charset) throw new MySquirrelException('Could not set charset to ' . $this->charset . '.');
+        }
     }
     
     // Query method.
     
     public function query($querystring /* and parameters */ )
     {
+        // Lazy connecting.
+        
+        if ($this->connection === false) $this->connect();
+        
         // Refuse to execute multiple statements at the same time.
         
         $querystring = trim($querystring, " \t\r\n;");
@@ -167,7 +190,7 @@ class MySquirrel
         
         else
         {
-            return new MySquirrelResult($result);
+            return new MySquirrelResult_MySQL($result);
         }
     }
     
@@ -175,6 +198,10 @@ class MySquirrel
     
     public function rawQuery($querystring)
     {
+        // Lazy connecting.
+        
+        if ($this->connection === false) $this->connect();
+        
         // Not in paranoid mode.
         
         if ($this->paranoid) throw new MySquirrelException('raw_query() is disabled in paranoid mode.');
@@ -198,7 +225,7 @@ class MySquirrel
         
         else
         {
-            return new MySquirrelResult($result);
+            return new MySquirrelResult_MySQL($result);
         }
     }
     
@@ -256,18 +283,11 @@ class MySquirrel
             throw new MySquirrelException('Error ' . $error . ': ' . mysql_error($this->connection));
         }
     }
-    
-    // Destructor.
-    
-    public function __destruct()
-    {
-        @mysql_close($this->connection);
-    }
 }
 
-// MySquirrel result class. An instance of this class is returned from SELECT queries.
+// MySquirrel result class for MySQL_* functions.
 
-class MySquirrelResult
+class MySquirrelResult_MySQL
 {
     // Constructor.
     
