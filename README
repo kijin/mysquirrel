@@ -2,8 +2,9 @@
 MySquirrel : Protect PHP and MySQL against injection attacks!
 =============================================================
 
-MySquirrel is a object-oriented wrapper around PHP's popular mysql_* functions.
-The focus is on simplicity, robust error handling, and most of all, security.
+MySquirrel is a lightweight object-oriented wrapper around PHP's popular MySQL
+and MySQLi extensions. The focus is on simplicity and ease of use, robust error
+handling, and most of all, security.
 
 Good old mysql_* functions are among the most commonly used in web development,
 but they are rather difficult to protect against SQL injection attacks.
@@ -12,22 +13,28 @@ than three functions with convoluted names for this purpose. However, a single
 parameter left unescaped by accident is all it takes for a remote attacker to
 pwn your entire database: e.g. "' OR 1 = 1; DELETE FROM table; -- whatever."
 
-More modern extensions, such as PDO and MySQLi, allow for prepared statements
-and/or parameterized queries that can greatly reduce injection vulnerabilities.
+More modern extensions, such as MySQLi, allow for prepared statements and/or
+parameterized queries that can greatly reduce injection vulnerabilities.
 However, they are not always available with shared hosting where PHP programs
-are most often deployed. Many developers therefore have to use mysql_* instead.
-This is where MySquirrel comes in: MySquirrel is mysql_* on steroids!
+are most often deployed, not to mention that the powerful API makes common
+tasks much more complicated than with mysql_* functions. It is just as tedious,
+if not more, to use MySQLi properly as it is to use MySQL properly. As a result,
+PHP developers often hang on to the nearly deprecated mysql_* functions.
 
 MySquirrel simulates parameterized queries, by disallowing multiple-statement
-queries by default, and by automatically escaping arguments. MySquirrel also
-supplies a few missing functions, such as beginTransaction() and commit().
-Where traditional mysql_* functions lack proper error handling, MySquirrel adds
-PDO-like exceptions to aid debugging and to enforce good coding style.
+queries by default, and by automatically escaping arguments. All you need to
+do is to pass potentially unsafe values as additional parameters to query().
+This is many times more convenient than escaping each of them manually, and
+absolutely fabulous compared to MySQLi's tedious process of binding variables.
+Where traditional MySQL functions lack proper error handling, MySquirrel adds
+PDO-style exceptions to aid debugging and to enforce good coding style.
 
-MySquirrel does not magically make your application secure. Improper use would
-leave your site just as vulnerable to SQL injection attacks as if you didn't
-use MySquirrel. However, with proper use, it should be nearly impossible for a
-remote attacker to pull off a successful SQL injection.
+MySquirrel, however, does not magically make your application secure. Improper
+use would leave your site just as vulnerable to attacks as if you didn't use
+MySquirrel at all. However, with proper use, it should be nearly impossible for
+a remote attacker to pull off a successful SQL injection. Another advantage of
+MySquirrel is that this "proper use" is easier to accomplish and consequently
+less error-prone than with the usual soup of mysql_* functions.
 
 MySquirrel is released under the GNU General Public License (GPL), version 3.
 See the enclosed LICENSE file for the full terms and conditions.
@@ -58,7 +65,16 @@ Explanation of the Above
   
     MySquirrel::connect() returns an object. You call methods on this object
     to interact with the MySQL connection. For example, instead of calling
-    mysql_query(), you would call $mysql->query() or something like that.
+    mysql_query() or MySQLi::query(), you would call $mysql->query().
+    
+    MySquirrel caches database connections. If you lose reference to the object
+    you were working with (e.g. you move to a different scope), just call
+    MySquirrel::connect() again with the same parameters to retrieve it.
+    
+    If the MySQLi extension is available, MySquirrel will use it instead of the
+    old mysql_* functions. But this choice is transparent to the user, and does
+    cause any changes to the way you work with MySquirrel. If MySQLi is not
+    available, MySquirrel falls back on mysql_* functions, again transparently.
     
     Never, ever put variables into the querystring, e.g. "WHERE id = $id".
     Script kiddies and other criminals love you for mixing variables with SQL!
@@ -78,18 +94,17 @@ Explanation of the Above
     
     Paranoid mode, which can be activated by calling paranoid(), makes two
     changes to MySquirrel's behavior. First, it disables rawQuery(). Second, it
-    makes query() refuse to execute any querystring with a quotation mark in it.
+    makes query() refuse to execute any query with quotes or comments in it.
     This will also prevent you from using string literals in your querystrings,
     such as "SELECT * FROM tickets WHERE status = 'pending' ... " among others.
     Although string literals are not necessarily insecure, in practice, a lot
     of these originate from untrusted sources and result in vulnerabilities.
-    Paranoid mode helps you make a habit of good programming practices,
-    in exchange for a little inconvenience.
+    Likewise, comments in short queries are a common sign of injection attacks.
     
     If your query has a result set (e.g. "SELECT", "SHOW", "DESCRIBE", etc.)
-    then query() will give you an instance of MySquirrelResult. You can fetch
+    then query() will return an instance of MySquirrelResult. You can fetch
     rows and other information about the result set by calling methods such as
-    fetch(), fetchObject(), and numRows() on this object. See below for more.
+    fetch(), fetchAll(), and numRows() on this object. See below for more.
     
     Unlike mysql_* functions, MySquirrel will not allow errors to pass silently.
     Nor will it follow the dickheaded practice of just die()'ing on any error.
@@ -111,22 +126,22 @@ MySquirrel Class : Instance Methods
     
     paranoid()
     query($querystring, [$param1, $param2 ... ] )
-    rawQuery($querystring)          // Equivalent to mysql_query()
-    affectedRows()                  // Equivalent to mysql_affected_rows()
-    lastInsertID()                  // Equivalent to mysql_insert_id()
-    beginTransactiion()             // Only with InnoDB
-    commit()                        // Only with InnoDB
-    rollback()                      // Only with InnoDB
+    rawQuery($querystring)
+    affectedRows()
+    lastInsertID()
+    beginTransactiion()
+    commit()
+    rollback()
 
 
 MySquirrelResult : Methods
 ==========================
     
-    fetch($type = MYSQL_BOTH)       // Equivalent to mysql_fetch_array()
-    fetchAssoc()                    // Equivalent to mysql_fetch_assoc()
-    fetchObject($class, $params)    // Equivalent to mysql_fetch_object()
-    fetchRow()                      // Equivalent to mysql_fetch_row()
-    fetchAll()                      // Returns the entire result set as an array
-    fieldInfo($offset)              // Combines all mysql_field_* functions
-    numFields()                     // Equivalent to mysql_num_fields()
-    numRows()                       // Equivalent to mysql_num_rows()
+    fetch($type = MYSQL_BOTH)
+    fetchAssoc()
+    fetchObject($class, $params)
+    fetchRow()
+    fetchAll()
+    fieldInfo($offset)
+    numFields()
+    numRows()
