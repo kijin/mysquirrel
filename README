@@ -143,6 +143,7 @@ MySquirrelDriver
 ================
     
     paranoid()
+    prepare($querystring)
     query($querystring, [$param1, $param2 ... ] )
     rawQuery($querystring)
     affectedRows()
