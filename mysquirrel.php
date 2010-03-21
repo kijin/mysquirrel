@@ -10,7 +10,7 @@
  * @copyright  (c) 2010, Kijin Sung <kijinbear@gmail.com>
  * @license    GPL v3 <http://www.opensource.org/licenses/gpl-3.0.html>
  * @link       http://github.com/kijin/mysquirrel
- * @version    0.2.1
+ * @version    0.2.2
  * 
  * -----------------------------------------------------------------------------
  * 
@@ -65,6 +65,16 @@ class MySquirrel
     // Database handles are cached here.
     
     private static $handles = array();
+    
+    // Sequence generation method (for prepared statements).
+    
+    public static function sequence()
+    {
+        // PHP scripts are single-threaded, so this is good enough.
+        
+        static $val = 1;
+        return $val++;
+    }
 }
 
 
@@ -586,7 +596,7 @@ class MySquirrelPreparedStmt_MySQLi implements MySquirrelPreparedStmt
         
         // Create a name for this prepared statement.
         
-        $this->statement = 'mysqr_' . substr(md5($querystring), 0, 8) . mt_rand(100000, 999999);
+        $this->statement = 'mysquirrel' . MySquirrel::sequence();
         
         // Count the number of placeholders.
         
@@ -637,7 +647,7 @@ class MySquirrelPreparedStmt_MySQLi implements MySquirrelPreparedStmt
             }
             $varname = '@' . $this->statement . '_v' . $i;
             $this->connection->query('SET ' . $varname . ' = ' . $param);
-            if (strlen($querystring) === 28)
+            if ($i == 0)
             {
                 $querystring .= ' USING ' . $varname;
             }
@@ -698,9 +708,10 @@ class MySquirrelPreparedStmt_MySQL implements MySquirrelPreparedStmt
         {
             throw new MySquirrelException('While in paranoid mode, you cannot use querystrings with quotes or comments in them.');
         }
+        
         // Create a name for this prepared statement.
         
-        $this->statement = 'mysqr_' . substr(md5($querystring), 0, 8) . mt_rand(100000, 999999);
+        $this->statement = 'mysquirrel' . MySquirrel::sequence();
         
         // Count the number of placeholders.
         
@@ -752,7 +763,7 @@ class MySquirrelPreparedStmt_MySQL implements MySquirrelPreparedStmt
             }
             $varname = '@' . $this->statement . '_v' . $i;
             mysql_query('SET ' . $varname . ' = ' . $param, $this->connection);
-            if (strlen($querystring) === 28)
+            if ($i == 0)
             {
                 $querystring .= ' USING ' . $varname;
             }
