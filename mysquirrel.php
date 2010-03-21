@@ -10,7 +10,7 @@
  * @copyright  (c) 2010, Kijin Sung <kijinbear@gmail.com>
  * @license    GPL v3 <http://www.opensource.org/licenses/gpl-3.0.html>
  * @link       http://github.com/kijin/mysquirrel
- * @version    0.2.2
+ * @version    0.2.3
  * 
  * -----------------------------------------------------------------------------
  * 
@@ -185,9 +185,9 @@ class MySquirrelDriver_MySQLi implements MySquirrelDriver
             throw new MySquirrelException('You are not allowed to execute multiple statements at once.');
         }
         
-        // If in paranoid mode, refuse to execute querystrings with quotes in them.
+        // If in paranoid mode, refuse to execute querystrings with quotes/comments/nulls in them.
         
-        if ($this->paranoid && (strpos($querystring, '\'') !== false || strpos($querystring, '"') !== false || strpos($querystring, '--') !== false))
+        if ($this->paranoid && (strpos($querystring, '\'') !== false || strpos($querystring, '"') !== false || strpos($querystring, '--') !== false || strpos($querystring, "\0") !== false))
         {
             throw new MySquirrelException('While in paranoid mode, you cannot use querystrings with quotes or comments in them.');
         }
@@ -211,7 +211,7 @@ class MySquirrelDriver_MySQLi implements MySquirrelDriver
         for ($i = 0; $i < $count; $i++)
         {
             $param = $params[$i];
-            if (is_numeric($param))
+            if (ctype_digit($param))
             {
                 $queryparts[$i] .= $param;
             }
@@ -415,9 +415,9 @@ class MySquirrelDriver_MySQL implements MySquirrelDriver
             throw new MySquirrelException('You are not allowed to execute multiple statements at once.');
         }
         
-        // If in paranoid mode, refuse to execute querystrings with quotes in them.
+        // If in paranoid mode, refuse to execute querystrings with quotes/comments/nulls in them.
         
-        if ($this->paranoid && (strpos($querystring, '\'') !== false || strpos($querystring, '"') !== false || strpos($querystring, '--') !== false))
+        if ($this->paranoid && (strpos($querystring, '\'') !== false || strpos($querystring, '"') !== false || strpos($querystring, '--') !== false || strpos($querystring, "\0") !== false))
         {
             throw new MySquirrelException('While in paranoid mode, you cannot use querystrings with quotes or comments in them.');
         }
@@ -441,7 +441,7 @@ class MySquirrelDriver_MySQL implements MySquirrelDriver
         for ($i = 0; $i < $count; $i++)
         {
             $param = $params[$i];
-            if (is_numeric($param))
+            if (ctype_digit($param))
             {
                 $queryparts[$i] .= $param;
             }
@@ -587,9 +587,9 @@ class MySquirrelPreparedStmt_MySQLi implements MySquirrelPreparedStmt
             throw new MySquirrelException('You are not allowed to execute multiple statements at once.');
         }
         
-        // If in paranoid mode, refuse to execute querystrings with quotes in them.
+        // If in paranoid mode, refuse to execute querystrings with quotes/comments/nulls in them.
         
-        if ($paranoid && (strpos($querystring, '\'') !== false || strpos($querystring, '"') !== false || strpos($querystring, '--') !== false))
+        if ($this->paranoid && (strpos($querystring, '\'') !== false || strpos($querystring, '"') !== false || strpos($querystring, '--') !== false || strpos($querystring, "\0") !== false))
         {
             throw new MySquirrelException('While in paranoid mode, you cannot use querystrings with quotes or comments in them.');
         }
@@ -640,7 +640,7 @@ class MySquirrelPreparedStmt_MySQLi implements MySquirrelPreparedStmt
         for ($i = 0; $i < $count; $i++)
         {
             $param = $params[$i];
-            if (!is_numeric($param))
+            if (!ctype_digit($param))
             {
                 if (get_magic_quotes_runtime()) $param = stripslashes($param);
                 $param = "'" . $this->connection->real_escape_string($param) . "'";
@@ -702,9 +702,9 @@ class MySquirrelPreparedStmt_MySQL implements MySquirrelPreparedStmt
             throw new MySquirrelException('You are not allowed to execute multiple statements at once.');
         }
         
-        // If in paranoid mode, refuse to execute querystrings with quotes in them.
+        // If in paranoid mode, refuse to execute querystrings with quotes/comments/nulls in them.
         
-        if ($paranoid && (strpos($querystring, '\'') !== false || strpos($querystring, '"') !== false || strpos($querystring, '--') !== false))
+        if ($this->paranoid && (strpos($querystring, '\'') !== false || strpos($querystring, '"') !== false || strpos($querystring, '--') !== false || strpos($querystring, "\0") !== false))
         {
             throw new MySquirrelException('While in paranoid mode, you cannot use querystrings with quotes or comments in them.');
         }
@@ -756,7 +756,7 @@ class MySquirrelPreparedStmt_MySQL implements MySquirrelPreparedStmt
         for ($i = 0; $i < $count; $i++)
         {
             $param = $params[$i];
-            if (!is_numeric($param))
+            if (!ctype_digit($param))
             {
                 if (get_magic_quotes_runtime()) $param = stripslashes($param);
                 $param = "'" . mysql_real_escape_string($param, $this->connection) . "'";
