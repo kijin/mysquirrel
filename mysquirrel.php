@@ -10,7 +10,7 @@
  * @copyright  (c) 2010, Kijin Sung <kijinbear@gmail.com>
  * @license    GPL v3 <http://www.opensource.org/licenses/gpl-3.0.html>
  * @link       http://github.com/kijin/mysquirrel
- * @version    0.2.3
+ * @version    0.2.2
  * 
  * -----------------------------------------------------------------------------
  * 
@@ -185,9 +185,9 @@ class MySquirrelDriver_MySQLi implements MySquirrelDriver
             throw new MySquirrelException('You are not allowed to execute multiple statements at once.');
         }
         
-        // If in paranoid mode, refuse to execute querystrings with quotes/comments/nulls in them.
+        // If in paranoid mode, refuse to execute querystrings with quotes in them.
         
-        if ($this->paranoid && (strpos($querystring, '\'') !== false || strpos($querystring, '"') !== false || strpos($querystring, '--') !== false || strpos($querystring, "\0") !== false))
+        if ($this->paranoid && (strpos($querystring, '\'') !== false || strpos($querystring, '"') !== false || strpos($querystring, '--') !== false))
         {
             throw new MySquirrelException('While in paranoid mode, you cannot use querystrings with quotes or comments in them.');
         }
@@ -196,6 +196,7 @@ class MySquirrelDriver_MySQLi implements MySquirrelDriver
         
         $params = func_get_args();
         array_shift($params);
+        if (is_array($params[0])) $params = $params[0];
         
         // Count the number of placeholders.
         
@@ -211,7 +212,7 @@ class MySquirrelDriver_MySQLi implements MySquirrelDriver
         for ($i = 0; $i < $count; $i++)
         {
             $param = $params[$i];
-            if (ctype_digit($param))
+            if (is_numeric($param))
             {
                 $queryparts[$i] .= $param;
             }
@@ -415,9 +416,9 @@ class MySquirrelDriver_MySQL implements MySquirrelDriver
             throw new MySquirrelException('You are not allowed to execute multiple statements at once.');
         }
         
-        // If in paranoid mode, refuse to execute querystrings with quotes/comments/nulls in them.
+        // If in paranoid mode, refuse to execute querystrings with quotes in them.
         
-        if ($this->paranoid && (strpos($querystring, '\'') !== false || strpos($querystring, '"') !== false || strpos($querystring, '--') !== false || strpos($querystring, "\0") !== false))
+        if ($this->paranoid && (strpos($querystring, '\'') !== false || strpos($querystring, '"') !== false || strpos($querystring, '--') !== false))
         {
             throw new MySquirrelException('While in paranoid mode, you cannot use querystrings with quotes or comments in them.');
         }
@@ -426,6 +427,7 @@ class MySquirrelDriver_MySQL implements MySquirrelDriver
         
         $params = func_get_args();
         array_shift($params);
+        if (is_array($params[0])) $params = $params[0];
         
         // Count the number of placeholders.
         
@@ -441,7 +443,7 @@ class MySquirrelDriver_MySQL implements MySquirrelDriver
         for ($i = 0; $i < $count; $i++)
         {
             $param = $params[$i];
-            if (ctype_digit($param))
+            if (is_numeric($param))
             {
                 $queryparts[$i] .= $param;
             }
@@ -587,9 +589,9 @@ class MySquirrelPreparedStmt_MySQLi implements MySquirrelPreparedStmt
             throw new MySquirrelException('You are not allowed to execute multiple statements at once.');
         }
         
-        // If in paranoid mode, refuse to execute querystrings with quotes/comments/nulls in them.
+        // If in paranoid mode, refuse to execute querystrings with quotes in them.
         
-        if ($this->paranoid && (strpos($querystring, '\'') !== false || strpos($querystring, '"') !== false || strpos($querystring, '--') !== false || strpos($querystring, "\0") !== false))
+        if ($paranoid && (strpos($querystring, '\'') !== false || strpos($querystring, '"') !== false || strpos($querystring, '--') !== false))
         {
             throw new MySquirrelException('While in paranoid mode, you cannot use querystrings with quotes or comments in them.');
         }
@@ -625,7 +627,9 @@ class MySquirrelPreparedStmt_MySQLi implements MySquirrelPreparedStmt
         // Get all parameters.
         
         $params = func_get_args();
-        $count = func_num_args();
+        if (is_array($params[0])) $params = $params[0];
+        $count = count($params);
+        
         if ($count !== $this->numargs)
         {
             throw new MySquirrelException('Prepared statement has ' . $this->numargs . ' placeholders, but ' . $count . ' parameters given.');
@@ -640,7 +644,7 @@ class MySquirrelPreparedStmt_MySQLi implements MySquirrelPreparedStmt
         for ($i = 0; $i < $count; $i++)
         {
             $param = $params[$i];
-            if (!ctype_digit($param))
+            if (!is_numeric($param))
             {
                 if (get_magic_quotes_runtime()) $param = stripslashes($param);
                 $param = "'" . $this->connection->real_escape_string($param) . "'";
@@ -702,9 +706,9 @@ class MySquirrelPreparedStmt_MySQL implements MySquirrelPreparedStmt
             throw new MySquirrelException('You are not allowed to execute multiple statements at once.');
         }
         
-        // If in paranoid mode, refuse to execute querystrings with quotes/comments/nulls in them.
+        // If in paranoid mode, refuse to execute querystrings with quotes in them.
         
-        if ($this->paranoid && (strpos($querystring, '\'') !== false || strpos($querystring, '"') !== false || strpos($querystring, '--') !== false || strpos($querystring, "\0") !== false))
+        if ($paranoid && (strpos($querystring, '\'') !== false || strpos($querystring, '"') !== false || strpos($querystring, '--') !== false))
         {
             throw new MySquirrelException('While in paranoid mode, you cannot use querystrings with quotes or comments in them.');
         }
@@ -741,7 +745,9 @@ class MySquirrelPreparedStmt_MySQL implements MySquirrelPreparedStmt
         // Get all parameters.
         
         $params = func_get_args();
-        $count = func_num_args();
+        if (is_array($params[0])) $params = $params[0];
+        $count = count($params);
+        
         if ($count !== $this->numargs)
         {
             throw new MySquirrelException('Prepared statement has ' . $this->numargs . ' placeholders, but ' . $count . ' parameters given.');
@@ -756,7 +762,7 @@ class MySquirrelPreparedStmt_MySQL implements MySquirrelPreparedStmt
         for ($i = 0; $i < $count; $i++)
         {
             $param = $params[$i];
-            if (!ctype_digit($param))
+            if (!is_numeric($param))
             {
                 if (get_magic_quotes_runtime()) $param = stripslashes($param);
                 $param = "'" . mysql_real_escape_string($param, $this->connection) . "'";
