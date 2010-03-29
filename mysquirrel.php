@@ -10,7 +10,7 @@
  * @copyright  (c) 2010, Kijin Sung <kijinbear@gmail.com>
  * @license    GPL v3 <http://www.opensource.org/licenses/gpl-3.0.html>
  * @link       http://github.com/kijin/mysquirrel
- * @version    0.2.3
+ * @version    0.2.4
  * 
  * -----------------------------------------------------------------------------
  * 
@@ -50,11 +50,11 @@ class MySquirrel
         
         elseif (extension_loaded('mysqli'))
         {
-            return self::$handles[$identifier] = new MySquirrelDriver_MySQLi($host, $user, $pass, $database, $charset = false);
+            return self::$handles[$identifier] = new MySquirrelDriver_MySQLi($host, $user, $pass, $database, $charset);
         }
         elseif (extension_loaded('mysql'))
         {
-            return self::$handles[$identifier] = new MySquirrelDriver_MySQL($host, $user, $pass, $database, $charset = false);
+            return self::$handles[$identifier] = new MySquirrelDriver_MySQL($host, $user, $pass, $database, $charset);
         }
         else
         {
