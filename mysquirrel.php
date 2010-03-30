@@ -48,7 +48,7 @@ class MySquirrel
         
         // Decide on the best driver to use, and instantiate it.
         
-        elseif (extension_loaded('myssqli'))
+        elseif (extension_loaded('mysqli'))
         {
             return self::$handles[$identifier] = new MySquirrelConnection_MySQLi($host, $user, $pass, $database, $charset);
         }
