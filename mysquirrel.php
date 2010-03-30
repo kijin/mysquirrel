@@ -96,6 +96,7 @@ abstract class MySquirrelConnection
     protected $charset;
     protected $connection = false;
     protected $paranoid = false;
+    protected $unmagic = false;
     
     // Constructor.
     
@@ -130,7 +131,7 @@ abstract class MySquirrelConnection
         // Instantiate and return a new prepared statement object.
         
         $class = str_replace('Connection', 'PreparedStmt', get_class($this));
-        return new $class($this->connection, $querystring, $this->paranoid);
+        return new $class($this->connection, $querystring, $this->paranoid, $this->unmagic);
     }
     
     // Query method.
@@ -182,7 +183,7 @@ abstract class MySquirrelConnection
             }
             else
             {
-                if (get_magic_quotes_runtime()) $param = stripslashes($param);
+                if ($this->unmagic) $param = stripslashes($param);
                 $queryparts[$i] .= "'" . $this->connection->real_escape_string($param) . "'";
             }
         }
@@ -208,6 +209,15 @@ abstract class MySquirrelConnection
         // Just query.
         
         return $this->commonQuery($querystring);
+    }
+    
+    // Unmagic method.
+    
+    public function unmagic()
+    {
+        // If enabled, MySquirrel will automatically compensate for magic quotes.
+        
+        if (get_magic_quotes_runtime()) $this->unmagic = true;
     }
     
     // Other methods.
@@ -450,15 +460,17 @@ abstract class MySquirrelPreparedStmt
     protected $querystring;
     protected $statement;
     protected $numargs;
+    protected $unmagic;
     
     // Constructor.
     
-    public function __construct($connection, $querystring, $paranoid)
+    public function __construct($connection, $querystring, $paranoid, $unmagic)
     {
         // Store the arguments in the instance.
         
         $this->connection = $connection;
         $this->querystring = $querystring;
+        $this->unmagic = $unmagic;
         
         // Refuse to execute multiple statements at the same time.
         
@@ -514,7 +526,7 @@ abstract class MySquirrelPreparedStmt
             $param = $params[$i];
             if (!is_numeric($param))
             {
-                if (get_magic_quotes_runtime()) $param = stripslashes($param);
+                if ($this->unmagic) $param = stripslashes($param);
                 $param = "'" . $this->connection->real_escape_string($param) . "'";
             }
             $varname = '@' . $this->statement . '_v' . $i;
