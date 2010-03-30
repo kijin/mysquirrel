@@ -407,12 +407,7 @@ class MySquirrelConnection_MySQL extends MySquirrelConnection
         
         // No native support, so we just fire off a literal query.
         
-        $success = mysql_query('BEGIN', $this->connection);
-        if ($error = mysql_errno($this->connection))
-        {
-            throw new MySquirrelException('Error ' . $error . ': ' . mysql_error($this->connection));
-        }
-        return $success;
+        return $this->commonQuery('BEGIN');
     }
     
     // Commit transaction.
@@ -421,12 +416,7 @@ class MySquirrelConnection_MySQL extends MySquirrelConnection
     {
         // No native support, so we just fire off a literal query.
         
-        $success = mysql_query('COMMIT', $this->connection);
-        if ($error = mysql_errno($this->connection))
-        {
-            throw new MySquirrelException('Error ' . $error . ': ' . mysql_error($this->connection));
-        }
-        return $success;
+        return $this->commonQuery('COMMIT');
     }
     
     // Roll back transaction.
@@ -435,12 +425,7 @@ class MySquirrelConnection_MySQL extends MySquirrelConnection
     {
         // No native support, so we just fire off a literal query.
         
-        $success = mysql_query('ROLLBACK', $this->connection);
-        if ($error = mysql_errno($this->connection))
-        {
-            throw new MySquirrelException('Error ' . $error . ': ' . mysql_error($this->connection));
-        }
-        return $success;
+        return $this->commonQuery('ROLLBACK');
     }
 }
 
