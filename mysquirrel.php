@@ -397,7 +397,7 @@ class MySquirrelConnection_MySQL extends MySquirrelConnection
         
         // No native support, so we just fire off a literal query.
         
-        $success = mysql_query('BEGIN TRANSACTION', $this->connection);
+        $success = mysql_query('BEGIN', $this->connection);
         if ($error = mysql_errno($this->connection))
         {
             throw new MySquirrelException('Error ' . $error . ': ' . mysql_error($this->connection));
@@ -442,16 +442,15 @@ class MySquirrelConnection_MySQL extends MySquirrelConnection
  * methods. The user does not need to care which driver is in use.
  */
 
-interface MySquirrelPreparedStmt
+abstract class MySquirrelPreparedStmt
 {
-    public function __construct($connection, $querystring, $paranoid);
-    public function execute();
-}
-
-// MySquirrel prepared statement class for MySQLi.
-
-class MySquirrelPreparedStmt_MySQLi implements MySquirrelPreparedStmt
-{
+    // Information about the current statement.
+    
+    protected $connection;
+    protected $querystring;
+    protected $statement;
+    protected $numargs;
+    
     // Constructor.
     
     public function __construct($connection, $querystring, $paranoid)
@@ -486,19 +485,8 @@ class MySquirrelPreparedStmt_MySQLi implements MySquirrelPreparedStmt
         
         // Prepare the statement.
         
-        $result = $this->connection->query('PREPARE ' . $this->statement . ' FROM \'' . $this->connection->real_escape_string($querystring) . '\'');
-        if ($error = mysqli_errno($this->connection))
-        {
-            throw new MySquirrelException('Error ' . $error . ': ' . mysqli_error($this->connection));
-        }
+        $this->realPrepare();
     }
-    
-    // Information about the statement.
-    
-    private $connection;
-    private $querystring;
-    private $statement;
-    private $numargs;
     
     // Execute method.
     
@@ -530,7 +518,7 @@ class MySquirrelPreparedStmt_MySQLi implements MySquirrelPreparedStmt
                 $param = "'" . $this->connection->real_escape_string($param) . "'";
             }
             $varname = '@' . $this->statement . '_v' . $i;
-            $this->connection->query('SET ' . $varname . ' = ' . $param);
+            $this->realQuery('SET ' . $varname . ' = ' . $param);
             if ($i == 0)
             {
                 $querystring .= ' USING ' . $varname;
@@ -542,126 +530,71 @@ class MySquirrelPreparedStmt_MySQLi implements MySquirrelPreparedStmt
         }
         
         // Execute the query.
+        
+        return $this->realQuery($querystring);
+    }
+    
+    // Destructor.
+    
+    public function __destruct()
+    {
+        // Deallocate the statement.
+        
+        $this->realQuery('DEALLOCATE PREPARE ' . $this->statement);
+    }
+}
+
+// MySquirrel prepared statement class for MySQLi.
+
+class MySquirrelPreparedStmt_MySQLi extends MySquirrelPreparedStmt
+{
+    // Real prepare method.
+    
+    protected function realPrepare()
+    {
+        // TODO: use native MySQLi support for prepared statements.
+        
+        $this->realQuery('PREPARE ' . $this->statement . ' FROM \'' . $this->connection->real_escape_string($this->querystring) . '\'');
+    }
+    
+    // Real query method.
+    
+    protected function realQuery($querystring)
+    {
+        // Query, and handle errors.
         
         $result = $this->connection->query($querystring);
         if ($error = mysqli_errno($this->connection))
         {
             throw new MySquirrelException('Error ' . $error . ': ' . mysqli_error($this->connection));
-        }
+        }    
         
         // Return the result.
         
-        if ($result === true || $result === false) return $result;
-        return new MySquirrelResult_MySQLi($result);
-    }
-    
-    // Destructor.
-    
-    public function __destruct()
-    {
-        // Deallocate the statement.
-        
-        $this->connection->query('DEALLOCATE PREPARE ' . $this->statement);
+        return (is_bool($result)) ? $result : new MySquirrelResult_MySQLi($result);
     }
 }
 
 // MySquirrel prepared statement class for MySQL_* functions.
 
-class MySquirrelPreparedStmt_MySQL implements MySquirrelPreparedStmt
+class MySquirrelPreparedStmt_MySQL extends MySquirrelPreparedStmt
 {
-    // Constructor.
+    // Real prepare method.
     
-    public function __construct($connection, $querystring, $paranoid)
+    protected function realPrepare()
     {
-        // Store the arguments in the instance.
+        // TODO: use native MySQLi support for prepared statements.
         
-        $this->connection = $connection;
-        $this->querystring = $querystring;
-        
-        // Refuse to execute multiple statements at the same time.
-        
-        $querystring = trim($querystring, " \t\r\n;");
-        if (strpos($querystring, ';') !== false)
-        {
-            throw new MySquirrelException('You are not allowed to execute multiple statements at once.');
-        }
-        
-        // If in paranoid mode, refuse to execute querystrings with quotes in them.
-        
-        if ($paranoid && (strpos($querystring, '\'') !== false || strpos($querystring, '"') !== false || strpos($querystring, '--') !== false))
-        {
-            throw new MySquirrelException('While in paranoid mode, you cannot use querystrings with quotes or comments in them.');
-        }
-        
-        // Create a name for this prepared statement.
-        
-        $this->statement = 'mysquirrel' . MySquirrel::sequence();
-        
-        // Count the number of placeholders.
-        
-        $this->numargs = substr_count($querystring, '?');
-        
-        // Prepare the statement.
-        
-        $result = @mysql_query('PREPARE ' . $this->statement . ' FROM \'' . mysql_real_escape_string($querystring, $this->connection) . '\'', $this->connection);
-        
-        if ($error = mysql_errno($this->connection))
-        {
-            throw new MySquirrelException('Error ' . $error . ': ' . mysql_error($this->connection));
-        }
+        $this->realQuery('PREPARE ' . $this->statement . ' FROM \'' . mysql_real_escape_string($this->querystring, $this->connection) . '\'');
     }
     
-    // Information about the statement.
+    // Real query method.
     
-    private $connection;
-    private $querystring;
-    private $statement;
-    private $numargs;
-    
-    // Execute method.
-    
-    public function execute( /* parameters */ )
+    protected function realQuery($querystring)
     {
-        // Get all parameters.
+        // Query, and handle errors.
         
-        $params = func_get_args();
-        if (count($params) === 1 && is_array($params[0])) $params = $params[0];
-        $count = count($params);
-        
-        if ($count !== $this->numargs)
-        {
-            throw new MySquirrelException('Prepared statement has ' . $this->numargs . ' placeholders, but ' . $count . ' parameters given.');
-        }
-        
-        // Initialize the execute querystring.
-        
-        $querystring = 'EXECUTE ' . $this->statement;
-        
-        // Set server-side variables with properly escaped parameter values.
-        
-        for ($i = 0; $i < $count; $i++)
-        {
-            $param = $params[$i];
-            if (!is_numeric($param))
-            {
-                if (get_magic_quotes_runtime()) $param = stripslashes($param);
-                $param = "'" . mysql_real_escape_string($param, $this->connection) . "'";
-            }
-            $varname = '@' . $this->statement . '_v' . $i;
-            mysql_query('SET ' . $varname . ' = ' . $param, $this->connection);
-            if ($i == 0)
-            {
-                $querystring .= ' USING ' . $varname;
-            }
-            else
-            {
-                $querystring .= ', ' . $varname;
-            }
-        }
-        
-        // Execute the query.
-        
-        $result = @mysql_query($querystring, $this->connection);
+        $result = mysql_query($querystring, $this->connection);
         if ($error = mysql_errno($this->connection))
         {
             throw new MySquirrelException('Error ' . $error . ': ' . mysql_error($this->connection));
@@ -669,17 +602,7 @@ class MySquirrelPreparedStmt_MySQL implements MySquirrelPreparedStmt
         
         // Return the result.
         
-        if ($result === true || $result === false) return $result;
-        return new MySquirrelResult_MySQL($result);
-    }
-    
-    // Destructor.
-    
-    public function __destruct()
-    {
-        // Deallocate the statement.
-        
-        mysql_query('DEALLOCATE PREPARE ' . $this->statement, $this->connection);
+        return (is_bool($result)) ? $result : new MySquirrelResult_MySQL($result);
     }
 }
 
