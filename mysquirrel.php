@@ -617,37 +617,35 @@ class MySquirrelPreparedStmt_MySQL extends MySquirrelPreparedStmt
  * concern, do not rely on these extra values.
  */
 
-interface MySquirrelResult
-{
-    public function __construct($result);
-    public function fetch();
-    public function fetchAssoc();
-    public function fetchObject($class_name = false, $params = array());
-    public function fetchRow();
-    public function fetchAll();
-    public function fieldInfo($offset);
-    public function numFields();
-    public function numRows();
-}
-
-// MySquirrel result class for MySQLi.
-
-class MySquirrelResult_MySQLi implements MySquirrelResult
+abstract class MySquirrelResult
 {
     // Constructor.
     
     public function __construct($result)
     {
-        // Result object is passed from MySquirrelDriver_MySQLi::query().
-        
-        if (!($result instanceof MySQLi_Result)) throw new Exception('Result is not a valid object.');
         $this->result = $result;
     }
     
     // Result resource is stored here.
     
-    private $result = null;
+    protected $result = null;
     
+    // Other methods.
+    
+    abstract public function fetch();
+    abstract public function fetchAssoc();
+    abstract public function fetchObject($class_name = false, $params = array());
+    abstract public function fetchRow();
+    abstract public function fetchAll();
+    abstract public function fieldInfo($offset);
+    abstract public function numFields();
+    abstract public function numRows();
+}
+
+// MySquirrel result class for MySQLi.
+
+class MySquirrelResult_MySQLi extends MySquirrelResult
+{
     // Fetch method (generic).
     
     public function fetch()
@@ -723,22 +721,8 @@ class MySquirrelResult_MySQLi implements MySquirrelResult
 
 // MySquirrel result class for MySQL_* functions.
 
-class MySquirrelResult_MySQL implements MySquirrelResult
+class MySquirrelResult_MySQL extends MySquirrelResult
 {
-    // Constructor.
-    
-    public function __construct($result)
-    {
-        // Result resource is passed from MySquirrelDriver_MySQL::query().
-        
-        if (!is_resource($result)) throw new Exception('Result is not a valid resource.');
-        $this->result = $result;
-    }
-    
-    // Result resource is stored here.
-    
-    private $result = null;
-    
     // Fetch method (generic).
     
     public function fetch()
