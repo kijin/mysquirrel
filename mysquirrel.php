@@ -40,7 +40,7 @@ class MySquirrel
     {
         // Check if the same connection object is already cached.
         
-        $identifier = md5("$host::$user::$pass::$database");
+        $identifier = md5("$host|$user|$pass|$database");
         if (isset(self::$handles[$identifier]))
         {
             return self::$handles[$identifier];
@@ -614,7 +614,7 @@ class MySquirrelPreparedStmt_MySQL extends MySquirrelPreparedStmt
  * concern, do not rely on these extra values.
  */
 
-abstract class MySquirrelResult
+abstract class MySquirrelResult implements Iterator
 {
     // Constructor.
     
@@ -623,12 +623,52 @@ abstract class MySquirrelResult
         $this->result = $result;
     }
     
-    // Result resource is stored here.
+    // Some protected properties.
     
     protected $result = null;
+    protected $iter_count = false;
+    protected $iter_index = false;
+    
+    // Iterator: Rewind.
+    
+    public function rewind()
+    {
+        $this->iter_count = $this->numRows();
+        $this->iter_index = 0;
+        $this->seekToTop();
+    }
+    
+    // Iterator: Valid.
+    
+    public function valid()
+    {
+        return ($this->iter_index < $this->iter_count) ? true : false;
+    }
+    
+    // Iterator: Current.
+    
+    public function current()
+    {
+        return $this->fetchAssoc();
+    }
+    
+    // Iterator: Key.
+    
+    public function key()
+    {
+        return $this->iter_index - 1;
+    }
+    
+    // Iterator: Next.
+    
+    public function next()
+    {
+        // iter_index is already incremented by fetchAssoc().
+    }
     
     // Other methods.
     
+    abstract protected function seekToTop();
     abstract public function fetch();
     abstract public function fetchAssoc();
     abstract public function fetchObject($class_name = false, $params = array());
@@ -643,10 +683,18 @@ abstract class MySquirrelResult
 
 class MySquirrelResult_MySQLi extends MySquirrelResult
 {
+    // Seek to Top.
+    
+    protected function seekToTop()
+    {
+        if (mysqli_num_rows($this->result) > 0) $this->result->data_seek(0);
+    }
+    
     // Fetch method (generic).
     
     public function fetch()
     {
+        $this->iter_index++;
         return $this->result->fetch_array(MYSQLI_BOTH);
     }
 
@@ -654,6 +702,7 @@ class MySquirrelResult_MySQLi extends MySquirrelResult
     
     public function fetchAssoc()
     {
+        $this->iter_index++;
         return $this->result->fetch_assoc();
     }
     
@@ -661,6 +710,7 @@ class MySquirrelResult_MySQLi extends MySquirrelResult
     
     public function fetchObject($class_name = false, $params = array())
     {
+        $this->iter_index++;
         return $class_name ? $this->result->fetch_object($class_name, $params) : $this->result->fetch_object();
     }
     
@@ -668,6 +718,7 @@ class MySquirrelResult_MySQLi extends MySquirrelResult
     
     public function fetchRow()
     {
+        $this->iter_index++;
         return $this->result->fetch_row();
     }
     
@@ -682,6 +733,7 @@ class MySquirrelResult_MySQLi extends MySquirrelResult
         else
         {
             $return = array();
+            $this->seekToTop();
             while ($row = $this->result->fetch_array(MYSQLI_BOTH)) $return[] = $row;
             return $return;
         }
@@ -720,17 +772,26 @@ class MySquirrelResult_MySQLi extends MySquirrelResult
 
 class MySquirrelResult_MySQL extends MySquirrelResult
 {
+    // Seek to Top.
+    
+    protected function seekToTop()
+    {
+        if (mysql_num_rows($this->result) > 0) mysql_data_seek($this->result, 0);
+    }
+    
     // Fetch method (generic).
     
     public function fetch()
     {
+        $this->iter_index++;
         return mysql_fetch_array($this->result, MYSQL_BOTH);
     }
-
+    
     // Fetch method (returns associated array).
     
     public function fetchAssoc()
     {
+        $this->iter_index++;
         return mysql_fetch_assoc($this->result);
     }
     
@@ -738,6 +799,7 @@ class MySquirrelResult_MySQL extends MySquirrelResult
     
     public function fetchObject($class_name = false, $params = array())
     {
+        $this->iter_index++;
         return $class_name ? mysql_fetch_object($this->result, $class_name, $params) : mysql_fetch_object($this->result);
     }
     
@@ -745,6 +807,7 @@ class MySquirrelResult_MySQL extends MySquirrelResult
     
     public function fetchRow()
     {
+        $this->iter_index++;
         return mysql_fetch_row($this->result);
     }
     
@@ -753,6 +816,7 @@ class MySquirrelResult_MySQL extends MySquirrelResult
     public function fetchAll()
     {
         $return = array();
+        $this->seekToTop();
         while ($row = mysql_fetch_array($this->result, MYSQL_BOTH)) $return[] = $row;
         return $return;
     }
