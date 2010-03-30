@@ -248,7 +248,7 @@ class MySquirrelDriver_MySQLi implements MySquirrelDriver
         
         // Not in paranoid mode.
         
-        if ($this->paranoid) throw new MySquirrelException('raw_query() is disabled in paranoid mode.');
+        if ($this->paranoid) throw new MySquirrelException('rawQuery() is disabled in paranoid mode.');
         
         // Just query.
         
@@ -479,7 +479,7 @@ class MySquirrelDriver_MySQL implements MySquirrelDriver
         
         // Not in paranoid mode.
         
-        if ($this->paranoid) throw new MySquirrelException('raw_query() is disabled in paranoid mode.');
+        if ($this->paranoid) throw new MySquirrelException('rawQuery() is disabled in paranoid mode.');
         
         // Just query.
         
