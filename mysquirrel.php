@@ -10,7 +10,7 @@
  * @copyright  (c) 2010, Kijin Sung <kijinbear@gmail.com>
  * @license    GPL v3 <http://www.opensource.org/licenses/gpl-3.0.html>
  * @link       http://github.com/kijin/mysquirrel
- * @version    0.2.5
+ * @version    0.2.6
  * 
  * -----------------------------------------------------------------------------
  * 
@@ -40,7 +40,7 @@ class MySquirrel
     {
         // Check if the same connection object is already cached.
         
-        $identifier = md5("$host|$user|$pass|$database");
+        $identifier = md5("$host $user $pass $database");
         if (isset(self::$handles[$identifier]))
         {
             return self::$handles[$identifier];
