@@ -10,7 +10,7 @@
  * @copyright  (c) 2010, Kijin Sung <kijinbear@gmail.com>
  * @license    GPL v3 <http://www.opensource.org/licenses/gpl-3.0.html>
  * @link       http://github.com/kijin/mysquirrel
- * @version    0.2.4
+ * @version    0.2.5
  * 
  * -----------------------------------------------------------------------------
  * 
@@ -64,7 +64,7 @@ class MySquirrel
     
     // Database handles are cached here.
     
-    private static $handles = array();
+    protected static $handles = array();
     
     // Sequence generation method (for prepared statements).
     
