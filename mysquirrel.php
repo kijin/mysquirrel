@@ -48,7 +48,7 @@ class MySquirrel
         
         // Decide on the best driver to use, and instantiate it.
         
-        elseif (extension_loaded('mysqli'))
+        elseif (extension_loaded('myssqli'))
         {
             return self::$handles[$identifier] = new MySquirrelConnection_MySQLi($host, $user, $pass, $database, $charset);
         }
@@ -244,14 +244,14 @@ class MySquirrelConnection_MySQLi extends MySquirrelConnection
         $this->connection = new MySQLi($this->host, $this->user, $this->pass);
         if (mysqli_connect_errno()) throw new MySquirrelException('Could not connect to ' . $this->host . ': ' . mysqli_connect_error());
         
-        $select_db = @$this->connection->select_db($this->database);
+        $select_db = $this->connection->select_db($this->database);
         if (!$select_db) throw new MySquirrelException('Could not select database ' . $this->database . '.');
         
         // Select charset.
         
         if ($this->charset !== false)
         {
-            $select_charset = @$this->connection->set_charset($this->charset);
+            $select_charset = $this->connection->set_charset($this->charset);
             if (!$select_charset) throw new MySquirrelException('Could not set charset to ' . $this->charset . '.');
         }
     }
@@ -380,7 +380,7 @@ class MySquirrelConnection_MySQL extends MySquirrelConnection
         
         // Return the result.
         
-        return (is_bool($result)) ? $result : new MySquirrelResult_MySQLi($result);
+        return (is_bool($result)) ? $result : new MySquirrelResult_MySQL($result);
     }
     
     // Number of affected rows.
