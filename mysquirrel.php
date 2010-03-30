@@ -50,11 +50,11 @@ class MySquirrel
         
         elseif (extension_loaded('mysqli'))
         {
-            return self::$handles[$identifier] = new MySquirrelDriver_MySQLi($host, $user, $pass, $database, $charset);
+            return self::$handles[$identifier] = new MySquirrelConnection_MySQLi($host, $user, $pass, $database, $charset);
         }
         elseif (extension_loaded('mysql'))
         {
-            return self::$handles[$identifier] = new MySquirrelDriver_MySQL($host, $user, $pass, $database, $charset);
+            return self::$handles[$identifier] = new MySquirrelConnection_MySQL($host, $user, $pass, $database, $charset);
         }
         else
         {
@@ -79,39 +79,23 @@ class MySquirrel
 
 
 /**
- * Drivers for various MySQL extensions.
+ * Connection drivers for various MySQL extensions.
  * 
  * Regardless of the underlying extension, all drivers expose the same public
  * methods. The user does not need to care which driver is in use.
  */
 
-interface MySquirrelDriver
+abstract class MySquirrelConnection
 {
-    public function __construct($host, $user, $pass, $database, $charset = false);
-    public function paranoid();
-    public function prepare($querystring);
-    public function query($querystring);
-    public function rawQuery($querystring);
-    public function affectedRows();
-    public function lastInsertID();
-    public function beginTransaction();
-    public function commit();
-    public function rollback();
-}
-
-// MySquirrel Driver for MySQLi.
-
-class MySquirrelDriver_MySQLi implements MySquirrelDriver
-{
-    // Instance-specific private properties.
+    // Some protected properties.
     
-    private $host;
-    private $user;
-    private $pass;
-    private $database;
-    private $charset;
-    private $connection = false;
-    private $paranoid = false;
+    protected $host;
+    protected $user;
+    protected $pass;
+    protected $database;
+    protected $charset;
+    protected $connection = false;
+    protected $paranoid = false;
     
     // Constructor.
     
@@ -135,27 +119,6 @@ class MySquirrelDriver_MySQLi implements MySquirrelDriver
         return $this->paranoid = true;
     }
     
-    // Connect method (private).
-    
-    private function connect()
-    {
-        // Connect.
-        
-        $this->connection = new MySQLi($this->host, $this->user, $this->pass);
-        if (mysqli_connect_errno()) throw new MySquirrelException('Could not connect to ' . $this->host . ': ' . mysqli_connect_error());
-        
-        $select_db = @$this->connection->select_db($this->database);
-        if (!$select_db) throw new MySquirrelException('Could not select database ' . $this->database . '.');
-        
-        // Select charset.
-        
-        if ($this->charset !== false)
-        {
-            $select_charset = @$this->connection->set_charset($this->charset);
-            if (!$select_charset) throw new MySquirrelException('Could not set charset to ' . $this->charset . '.');
-        }
-    }
-    
     // Prepare method.
     
     public function prepare($querystring)
@@ -166,7 +129,8 @@ class MySquirrelDriver_MySQLi implements MySquirrelDriver
         
         // Instantiate and return a new prepared statement object.
         
-        return new MySquirrelPreparedStmt_MySQLi($this->connection, $querystring, $this->paranoid);
+        $class = str_replace('Connection', 'PreparedStmt', get_class($this));
+        return new $class($this->connection, $querystring, $this->paranoid);
     }
     
     // Query method.
@@ -196,7 +160,7 @@ class MySquirrelDriver_MySQLi implements MySquirrelDriver
         
         $params = func_get_args();
         array_shift($params);
-        if (is_array($params[0])) $params = $params[0];
+        if (count($params) === 1 && is_array($params[0])) $params = $params[0];
         
         // Count the number of placeholders.
         
@@ -226,16 +190,7 @@ class MySquirrelDriver_MySQLi implements MySquirrelDriver
         
         // Run the reconstructed query.
         
-        $result = $this->connection->query($querystring);
-        if ($error = mysqli_errno($this->connection))
-        {
-            throw new MySquirrelException('Error ' . $error . ': ' . mysqli_error($this->connection));
-        }
-        
-        // Return the result.
-        
-        if ($result === true || $result === false) return $result;
-        return new MySquirrelResult_MySQLi($result);
+        return $this->commonQuery($querystring);
     }
     
     // Raw query method.
@@ -252,6 +207,51 @@ class MySquirrelDriver_MySQLi implements MySquirrelDriver
         
         // Just query.
         
+        return $this->commonQuery($querystring);
+    }
+    
+    // Other methods.
+    
+    abstract protected function connect();
+    abstract protected function commonQuery($querystring);
+    abstract public function affectedRows();
+    abstract public function lastInsertID();
+    abstract public function beginTransaction();
+    abstract public function commit();
+    abstract public function rollback();
+}
+
+// MySquirrel Connection Driver for MySQLi.
+
+class MySquirrelConnection_MySQLi extends MySquirrelConnection
+{
+    // Connect method.
+    
+    protected function connect()
+    {
+        // Connect.
+        
+        $this->connection = new MySQLi($this->host, $this->user, $this->pass);
+        if (mysqli_connect_errno()) throw new MySquirrelException('Could not connect to ' . $this->host . ': ' . mysqli_connect_error());
+        
+        $select_db = @$this->connection->select_db($this->database);
+        if (!$select_db) throw new MySquirrelException('Could not select database ' . $this->database . '.');
+        
+        // Select charset.
+        
+        if ($this->charset !== false)
+        {
+            $select_charset = @$this->connection->set_charset($this->charset);
+            if (!$select_charset) throw new MySquirrelException('Could not set charset to ' . $this->charset . '.');
+        }
+    }
+    
+    // Common query method.
+    
+    protected function commonQuery($querystring)
+    {
+        // Query, and handle errors.
+        
         $result = $this->connection->query($querystring);
         if ($error = mysqli_errno($this->connection))
         {
@@ -260,8 +260,7 @@ class MySquirrelDriver_MySQLi implements MySquirrelDriver
         
         // Return the result.
         
-        if ($result === true || $result === false) return $result;
-        return new MySquirrelResult_MySQLi($result);
+        return (is_bool($result)) ? $result : new MySquirrelResult_MySQLi($result);
     }
     
     // Number of affected rows.
@@ -275,8 +274,6 @@ class MySquirrelDriver_MySQLi implements MySquirrelDriver
     
     public function lastInsertID()
     {
-        // Return the last insert ID.
-        
         return $this->connection->insert_id();
     }
     
@@ -284,9 +281,13 @@ class MySquirrelDriver_MySQLi implements MySquirrelDriver
     
     public function beginTransaction()
     {
-        // No native support, so we just fire off a literal query.
+        // Lazy connecting.
         
-        $success = @$this->connection->autocommit(false);
+        if ($this->connection === false) $this->connect();
+        
+        // Turn off autocommit.
+        
+        $success = $this->connection->autocommit(false);
         if ($error = mysqli_errno($this->connection))
         {
             throw new MySquirrelException('Error ' . $error . ': ' . mysqli_error($this->connection));
@@ -298,9 +299,9 @@ class MySquirrelDriver_MySQLi implements MySquirrelDriver
     
     public function commit()
     {
-        // No native support, so we just fire off a literal query.
+        // There's a method to do that.
         
-        $success = @$this->connection->commit();
+        $success = $this->connection->commit();
         if ($error = mysqli_errno($this->connection))
         {
             throw new MySquirrelException('Error ' . $error . ': ' . mysqli_error($this->connection));
@@ -312,9 +313,9 @@ class MySquirrelDriver_MySQLi implements MySquirrelDriver
     
     public function rollback()
     {
-        // No native support, so we just fire off a literal query.
+        // There's a method to do that.
         
-        $success = @$this->connection->rollback();
+        $success = $this->connection->rollback();
         if ($error = mysqli_errno($this->connection))
         {
             throw new MySquirrelException('Error ' . $error . ': ' . mysqli_error($this->connection));
@@ -325,50 +326,18 @@ class MySquirrelDriver_MySQLi implements MySquirrelDriver
 
 // MySquirrel driver for MySQL_* functions.
 
-class MySquirrelDriver_MySQL implements MySquirrelDriver
+class MySquirrelConnection_MySQL extends MySquirrelConnection
 {
-    // Instance-specific private properties.
+    // Connect method.
     
-    private $host;
-    private $user;
-    private $pass;
-    private $database;
-    private $charset;
-    private $connection = false;
-    private $paranoid = false;
-    
-    // Constructor.
-    
-    public function __construct($host, $user, $pass, $database, $charset = false)
-    {
-        // Store parameters as private properties.
-        
-        $this->host = $host;
-        $this->user = $user;
-        $this->pass = $pass;
-        $this->database = $database;
-        $this->charset = $charset;
-    }
-    
-    // Paranoid method.
-    
-    public function paranoid()
-    {
-        // When in paranoid mode, raw queries are disabled, and quotes in queries are not permitted.
-        
-        return $this->paranoid = true;
-    }
-    
-    // Connect method (private).
-    
-    private function connect()
+    protected function connect()
     {
         // Connect.
         
-        $this->connection = @mysql_connect($this->host, $this->user, $this->pass);
+        $this->connection = mysql_connect($this->host, $this->user, $this->pass);
         if (!$this->connection) throw new MySquirrelException('Could not connect to ' . $this->host . '.');
         
-        $select_db = @mysql_select_db($this->database, $this->connection);
+        $select_db = mysql_select_db($this->database, $this->connection);
         if (!$select_db) throw new MySquirrelException('Could not select database ' . $this->database . '.');
         
         // Select charset (only available in MySQL 5.0.7+).
@@ -377,87 +346,23 @@ class MySquirrelDriver_MySQL implements MySquirrelDriver
         {
             if (version_compare(PHP_VERSION, '5.2.3', '>='))
             {
-                $select_charset = @mysql_set_charset($this->charset, $this->connection);
+                $select_charset = mysql_set_charset($this->charset, $this->connection);
             }
             else
             {
-                $select_charset = @mysql_query('SET NAMES ' . mysql_real_escape_string($this->charset, $this->connection), $this->connection);
+                $select_charset = mysql_query('SET NAMES ' . mysql_real_escape_string($this->charset, $this->connection), $this->connection);
             }
             if (!$select_charset) throw new MySquirrelException('Could not set charset to ' . $this->charset . '.');
         }
     }
     
-    // Prepare method.
+    // Common query method.
     
-    public function prepare($querystring)
+    protected function commonQuery($querystring)
     {
-        // Lazy connecting.
+        // Query, and handle errors.
         
-        if ($this->connection === false) $this->connect();
-        
-        // Instantiate and return a new prepared statement object.
-        
-        return new MySquirrelPreparedStmt_MySQL($this->connection, $querystring, $this->paranoid);
-    }
-    
-    // Query method.
-    
-    public function query($querystring /* and parameters */ )
-    {
-        // Lazy connecting.
-        
-        if ($this->connection === false) $this->connect();
-        
-        // Refuse to execute multiple statements at the same time.
-        
-        $querystring = trim($querystring, " \t\r\n;");
-        if (strpos($querystring, ';') !== false)
-        {
-            throw new MySquirrelException('You are not allowed to execute multiple statements at once.');
-        }
-        
-        // If in paranoid mode, refuse to execute querystrings with quotes in them.
-        
-        if ($this->paranoid && (strpos($querystring, '\'') !== false || strpos($querystring, '"') !== false || strpos($querystring, '--') !== false))
-        {
-            throw new MySquirrelException('While in paranoid mode, you cannot use querystrings with quotes or comments in them.');
-        }
-        
-        // Get all parameters.
-        
-        $params = func_get_args();
-        array_shift($params);
-        if (is_array($params[0])) $params = $params[0];
-        
-        // Count the number of placeholders.
-        
-        $count = substr_count($querystring, '?');
-        if ($count !== count($params))
-        {
-            throw new MySquirrelException('Querystring has ' . $count . ' placeholders, but ' . count($params) . ' parameters given.');
-        }
-        
-        // Replace all placeholders with properly escaped parameter values.
-        
-        $queryparts = explode('?', $querystring);
-        for ($i = 0; $i < $count; $i++)
-        {
-            $param = $params[$i];
-            if (is_numeric($param))
-            {
-                $queryparts[$i] .= $param;
-            }
-            else
-            {
-                if (get_magic_quotes_runtime()) $param = stripslashes($param);
-                $queryparts[$i] .= "'" . mysql_real_escape_string($param, $this->connection) . "'";
-            }
-        }
-        $querystring = implode('', $queryparts);
-        
-        // Run the reconstructed query.
-        
-        $result = @mysql_query($querystring, $this->connection);
+        $result = mysql_query($querystring, $this->connection);
         if ($error = mysql_errno($this->connection))
         {
             throw new MySquirrelException('Error ' . $error . ': ' . mysql_error($this->connection));
@@ -465,34 +370,7 @@ class MySquirrelDriver_MySQL implements MySquirrelDriver
         
         // Return the result.
         
-        if ($result === true || $result === false) return $result;
-        return new MySquirrelResult_MySQL($result);
-    }
-    
-    // Raw query method.
-    
-    public function rawQuery($querystring)
-    {
-        // Lazy connecting.
-        
-        if ($this->connection === false) $this->connect();
-        
-        // Not in paranoid mode.
-        
-        if ($this->paranoid) throw new MySquirrelException('rawQuery() is disabled in paranoid mode.');
-        
-        // Just query.
-        
-        $result = @mysql_query($querystring, $this->connection);
-        if ($error = mysql_errno($this->connection))
-        {
-            throw new MySquirrelException('Error ' . $error . ': ' . mysql_error($this->connection));
-        }
-        
-        // Return the result.
-        
-        if ($result === true || $result === false) return $result;
-        return new MySquirrelResult_MySQL($result);
+        return (is_bool($result)) ? $result : new MySquirrelResult_MySQLi($result);
     }
     
     // Number of affected rows.
@@ -506,8 +384,6 @@ class MySquirrelDriver_MySQL implements MySquirrelDriver
     
     public function lastInsertID()
     {
-        // Return the last insert ID.
-        
         return mysql_insert_id($this->connection);
     }
     
@@ -515,9 +391,13 @@ class MySquirrelDriver_MySQL implements MySquirrelDriver
     
     public function beginTransaction()
     {
+        // Lazy connecting.
+        
+        if ($this->connection === false) $this->connect();
+        
         // No native support, so we just fire off a literal query.
         
-        $success = @mysql_query('BEGIN TRANSACTION', $this->connection);
+        $success = mysql_query('BEGIN TRANSACTION', $this->connection);
         if ($error = mysql_errno($this->connection))
         {
             throw new MySquirrelException('Error ' . $error . ': ' . mysql_error($this->connection));
@@ -531,7 +411,7 @@ class MySquirrelDriver_MySQL implements MySquirrelDriver
     {
         // No native support, so we just fire off a literal query.
         
-        $success = @mysql_query('COMMIT', $this->connection);
+        $success = mysql_query('COMMIT', $this->connection);
         if ($error = mysql_errno($this->connection))
         {
             throw new MySquirrelException('Error ' . $error . ': ' . mysql_error($this->connection));
@@ -545,7 +425,7 @@ class MySquirrelDriver_MySQL implements MySquirrelDriver
     {
         // No native support, so we just fire off a literal query.
         
-        $success = @mysql_query('ROLLBACK', $this->connection);
+        $success = mysql_query('ROLLBACK', $this->connection);
         if ($error = mysql_errno($this->connection))
         {
             throw new MySquirrelException('Error ' . $error . ': ' . mysql_error($this->connection));
@@ -627,7 +507,7 @@ class MySquirrelPreparedStmt_MySQLi implements MySquirrelPreparedStmt
         // Get all parameters.
         
         $params = func_get_args();
-        if (is_array($params[0])) $params = $params[0];
+        if (count($params) === 1 && is_array($params[0])) $params = $params[0];
         $count = count($params);
         
         if ($count !== $this->numargs)
@@ -745,7 +625,7 @@ class MySquirrelPreparedStmt_MySQL implements MySquirrelPreparedStmt
         // Get all parameters.
         
         $params = func_get_args();
-        if (is_array($params[0])) $params = $params[0];
+        if (count($params) === 1 && is_array($params[0])) $params = $params[0];
         $count = count($params);
         
         if ($count !== $this->numargs)
