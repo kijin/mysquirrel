@@ -3,6 +3,7 @@ Introduction
 
 MySquirrel is a lightweight object-oriented wrapper around the MySQL and MySQLi extensions of PHP 5.
 The focus is on simplicity and ease of use, robust error handling, and most of all, security.
+
 MySquirrel is designed with the **small-time web developer** in mind,
 whose projects often end up in the unpredictable and inconsistent world of **shared hosting**.
 MySquirrel does not require advanced database extensions such as PDO,
@@ -16,28 +17,30 @@ MySquirrel can also be used in **paranoid mode**, which enables additional secur
 All variables marked with `?` and passed as separate parameters are automatically escaped.
 No more tedious escaping, no more SQL injection vulnerabilities.
 
-MySquirrel is released under Version 3 of the GNU General Public License.
+MySquirrel is released under the [GNU General Public License, version 3](http://www.gnu.org/licenses/gpl.html).
 
 ### What's wrong with `mysql_query()` ?
 
 Good old `mysql_*` functions are among the most commonly used in PHP web development,
-but they are rather difficult to protect against SQL injection attacks.
+but they are rather difficult to protect against [SQL injection](http://en.wikipedia.org/wiki/Sql_injection) attacks.
 Injection-proofing often involves tedious escaping, and PHP supplies no less than three functions
-with convoluted names for this purpose: `stripslashes` (deprecated),
-`mysql_escape_string` (also deprecated), and `mysql_real_escape_string` (recommended).
+with convoluted names for this purpose: `stripslashes` (deprecated), `mysql_escape_string` (also deprecated),
+and `mysql_real_escape_string` ([recommended](http://ca2.php.net/manual/en/function.mysql-real-escape-string.php)).
 You are supposed to apply this function to each and every variable that you use in your query,
 all the while accounting for the quirks introduced by abominations such as magic quotes.
 However, a single unescaped parameter is all it takes for a remote attacker to pwn your database:
 `' OR 1 = 1; DELETE FROM table; --`.
 No wonder everyone wants you to stay far away from `mysql_*` functions.
 
-More modern extensions, such as PDO and MySQLi, enable prepared statements and/or parametrized queries
-that can greatly reduce injection vulnerabilities.
+More modern extensions, such as [PDO](http://ca.php.net/manual/en/book.pdo.php) and [MySQLi](http://ca.php.net/manual/en/book.mysqli.php),
+enable prepared statements and/or parametrized queries that can greatly reduce injection vulnerabilities.
 But they are not always available with shared hosting where PHP programs are most often deployed,
 not to mention that the powerful API (especially MySQLi) makes common tasks much more complicated than usual.
 Try to run a parametrized query using MySQLi with half a dozen bound variables!
 It is just as tedious, if not more, to use MySQLi properly as it is to use MySQL properly.
 As a result, PHP developers often hang on to the nearly deprecated `mysql_*` functions.
+
+MySquirrel comes to the rescue. Just see how easy it is, below:
 
 ### Quick start guide
 
@@ -69,7 +72,7 @@ Supply any number of additional variables as extra arguments.
     $mysql->query('UPDATE users SET email = ? WHERE id = ?', $new_email, $id);
     $ar = $mysql->affectedRows();
 
-Alternatively, you can pass an array of parameters.
+Alternatively, you can pass an array of parameters. This can be useful sometimes.
 
     $params = array($name, $password, $email);
     $mysql->query('INSERT INTO users (name, password, email) VALUES (?, ?, ?)', $params);
@@ -140,10 +143,11 @@ Notes on Best Practice
 Never, ever put variables into the querystring, e.g. `WHERE id = $id AND name = '$name'`.
 Script kiddies and other criminals love you for mixing variables with SQL!
 Instead, put a question mark (`?`) where you would normally put a variable.
+*Do not put quotes around it.* Just pretend that the question mark is part of the SQL syntax.
 Then supply the variable itself as an additional argument when you call `query()`, as in the examples above.
 
 You can supply as many variables as you want in this way,
-but the number of additional arguments must match the number of placeholders in the querystring.
+but *the number of additional arguments must match the number of placeholders*.
 The same rule applies when you pass variables as a single array.
 MySquirrel will automatically escape all parameters supplied using this syntax;
 there is no need to pre-escape them in any way.
@@ -154,13 +158,14 @@ Notice that `query()` will not accept querystrings that contain multiple SQL sta
 Only one statement is permitted per method call.
 This helps prevent malicious folks from attaching `DELETE` or similar to your querystring.
 
-A somewhat inconvenient side effect of this rule is that you cannot run queries that
-contain semicolons in them. You cannot even have semicolons inside string literals.
-Instead, string literals should be passed as separate parameters.
-In practice, most string literals come from insecure sources, so it is always a good idea to
-pass them as separate parameters. Paranoid mode, explained below, actually makes this practice mandatory.
+A somewhat inconvenient side effect of this rule is that *you cannot run queries that contain semicolons*.
+You cannot even have semicolons inside string literals.
+String literals containing semicolons should be passed as separate parameters instead.
+In practice, most string literals come from insecure sources,
+so it is often a good idea to pass them as separate parameters anyway.
+Paranoid mode, explained below, actually makes this practice mandatory.
 
-Another side effect is that you cannot run multiple statements at the same time.
+Another side effect is that *you cannot run multiple statements at the same time*.
 Nor is it possible to run statements that contain other statements, such as
 many forms of `CREATE PROCEDURE`. If you need to execute several statements at the same time,
 or if you need to run statements that contain other statements, use `rawQuery()` instead.
@@ -185,7 +190,7 @@ makes two changes to MySquirrel's behavior:
   * It disables `rawQuery()`.
   * It makes `query()` reject querystrings that contain quotes, comments, or null bytes.
 
-Note that these restrictions will also prevent you from using string literals in your querystrings,
+Note that these restrictions will also prevent you from using any string literal at all,
 such as `SELECT * FROM tickets WHERE status = 'pending' ...` among others.
 Although string literals are not necessarily insecure, in practice,
 a lot of these originate from untrusted sources and result in vulnerabilities.
@@ -201,7 +206,7 @@ call `paranoid()` immediately after obtaining the connection object.
 
 ### Undoing Magic Quotes
 
-If your server has magic quotes enabled (which is not a good idea, but sometimes you can't help),
+If your server has magic quotes enabled (*which is not a good idea, but sometimes you can't help*),
 and if most of the parameters you're going to use come from potentially insecure sources (GET, POST, etc),
 you can call `unmagic()` to tell MySquirrel to compensate for magic quotes
 and prevent extraneous backslashes from being inserted.
@@ -212,7 +217,7 @@ but incorrect use may cause some strings to be inserted incorrectly.
 
 Unlike `mysql_*` functions, MySquirrel will not allow errors to pass silently.
 Nor will it follow the dickheaded practice of just `die()`ing on any database error.
-If any error occurs, `MySquirrelException` will be thrown.
+*If any error occurs, `MySquirrelException` will be thrown*.
 It is your responsibility to catch and handle this exception properly.
 Often, `mysql_*` doesn't even issue a warning when you try to execute SQL statements with syntax erorrs!
 This recklessness must come to an end, and MySquirrel goes to great lengths to remedy the situation where possible.
