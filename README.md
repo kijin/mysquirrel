@@ -8,11 +8,11 @@ MySquirrel is designed with the **small-time web developer** in mind,
 whose projects often end up in the unpredictable and inconsistent world of **shared hosting**.
 MySquirrel does not require advanced database extensions such as PDO,
 while bringing to you some of the major benefits of those newer interfaces.
-The only requirements are PHP 5.1+ and a reasonably up-to-date version of MySQL.
+The only prerequisites are PHP 5.1+ and a reasonably up-to-date version of MySQL.
 
 MySquirrel makes it super easy to run **parametrized queries** and **prepared statements**,
-while requiring nothing more than good old `mysql_*` functions.
-(If MySQLi is available, MySquirrel will prefer it, without any change to the API.)
+and otherwise mimics PDO's behavior, while requiring nothing more than good old `mysql_*` functions.
+(If MySQLi is available, MySquirrel will use it instead, without any change to the API.)
 MySquirrel can also be used in **paranoid mode**, which enables additional security measures.
 All variables marked with `?` and passed as separate parameters are automatically escaped.
 No more tedious escaping, no more SQL injection vulnerabilities.
@@ -69,7 +69,7 @@ The result class implements the Iterator interface, so you can also do this.
 
 Supply any number of additional variables as extra arguments.
 
-    $mysql->query('UPDATE users SET email = ? WHERE id = ?', $new_email, $id);
+    $mysql->query('UPDATE users SET email = ? WHERE id = ?', $email, $id);
     $ar = $mysql->affectedRows();
 
 Alternatively, you can pass an array of parameters. This can be useful sometimes.
@@ -85,6 +85,15 @@ Use prepared statements to speed up identical queries.
     $stmt->execute($name2, $password2, $email2);
     $stmt->execute($name3, $password3, $email3);
 
+### Differences from PDO
+
+The following points are not intended to suggest that MySquirrel is better than PDO.
+In fact, if PDO is available, you should probably use it instead of "hacks" such as MySquirrel.
+
+  * Parameters can be passed as separate arguments or as an array. (PDO supports only the latter.)
+  * Errors always generate an exception. (PDO can be configured to produce warnings instead.)
+  * MySquirrel only supports MySQL. (PDO supports almost a dozen different database systems.)
+  * MySquirrel has "paranoid mode". (PDO doesn't, but you should write secure programs anyway.)
 
 Reference Guide
 ===============
@@ -106,16 +115,16 @@ rather, any error condition reported by the server will result in a `MySquirrelE
 
 These methods should be called on the return value of `MySquirrel::connect()`.
 
-  * paranoid() _Activates paranoid mode (see below)_
+  * paranoid()                      _Activates paranoid mode (see below)_
   * prepare($querystring)
   * query($querystring, [$param1, $param2 ... ] )
   * rawQuery($querystring)
   * affectedRows()
   * lastInsertID()
-  * beginTransaction()  _Only with InnoDB_
-  * commit()  _Only with InnoDB_
-  * rollback()  _Only with InnoDB_
-  * unmagic() _If enabled, automatically compensate for evil magic quotes_
+  * beginTransaction()              _Only with InnoDB_
+  * commit()                        _Only with InnoDB_
+  * rollback()                      _Only with InnoDB_
+  * unmagic()                       _If enabled, compensate for evil magic quotes_
 
 ### MySquirrelPreparedStmt class
 
@@ -127,14 +136,14 @@ These methods should be called on the return value of `prepare()`.
 
 These methods should be called on the return value of `query()`, `rawQuery()`, or `execute()`.
     
-  * fetch() _Returns both types of arrays_
-  * fetchAssoc() _Returns an associative array_
-  * fetchObject($class, $params) _Returns an object_
-  * fetchRow() _Returns an enumerated array_
-  * fetchAll() _Returns every row in the result set_
-  * fieldInfo($offset) _Returns information about a column_
-  * numFields()
-  * numRows()
+  * fetch()                         _Fetch a row as both types of arrays_
+  * fetchAssoc()                    _Fetch a row as an associative array_
+  * fetchObject($class, $params)    _Fetch a row as an object, optionally of a specified class_
+  * fetchRow()                      _Fetch a row as an enumerated array_
+  * fetchAll()                      _Returns every row in the result set_
+  * fieldInfo($offset)              _Returns information about a column_
+  * numFields()                     _Returns number of columns in the result set_
+  * numRows()                       _Returns number of rows in the result set_
 
 
 Notes on Best Practice
