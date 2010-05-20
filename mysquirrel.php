@@ -10,7 +10,7 @@
  * @copyright  (c) 2010, Kijin Sung <kijinbear@gmail.com>
  * @license    GPL v3 <http://www.opensource.org/licenses/gpl-3.0.html>
  * @link       http://github.com/kijin/mysquirrel
- * @version    0.2.6
+ * @version    0.2.7
  * 
  * -----------------------------------------------------------------------------
  * 
@@ -217,7 +217,7 @@ abstract class MySquirrelConnection
     {
         // If enabled, MySquirrel will automatically compensate for magic quotes.
         
-        if (get_magic_quotes_runtime()) $this->unmagic = true;
+        if (get_magic_quotes_gpc() || get_magic_quotes_runtime()) $this->unmagic = true;
     }
     
     // Other methods.
