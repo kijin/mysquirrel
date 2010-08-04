@@ -6,7 +6,7 @@ include('mysquirrel.php');
 
 // Connect.
 
-$mysql = MySquirrel::connect('localhost', 'user', 'pass', 'database');
+$mysql = new MySquirrel('localhost', 'user', 'pass', 'database');
 
 // Activate paranoid mode.
 
