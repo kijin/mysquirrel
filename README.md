@@ -1,7 +1,7 @@
 Introduction
 ============
 
-MySquirrel is a lightweight object-oriented wrapper around the MySQL and MySQLi extensions of PHP 5.
+MySquirrel is a lightweight object-oriented wrapper around the MySQL extension of PHP 5.
 The focus is on simplicity and ease of use, robust error handling, and most of all, security.
 
 MySquirrel is designed with the **small-time web developer** in mind,
@@ -12,7 +12,6 @@ The only prerequisites are PHP 5.1+ and a reasonably up-to-date version of MySQL
 
 MySquirrel makes it super easy to run **parametrized queries** and **prepared statements**,
 and otherwise mimics PDO's behavior, while requiring nothing more than good old `mysql_*` functions.
-(If MySQLi is available, MySquirrel will use it instead, without any change to the API.)
 MySquirrel can also be used in **paranoid mode**, which enables additional security measures.
 All variables marked with `?` and passed as separate parameters are automatically escaped.
 No more tedious escaping, no more SQL injection vulnerabilities.
@@ -48,9 +47,9 @@ Just include one file.
 
     include('mysquirrel.php');
 
-Instead of `mysql_connect()`, call `MySquirrel::connect()` and use the returned object.
+Instead of `mysql_connect()`, call `new MySquirrel()` to create a connection object.
 
-    $mysql = MySquirrel::connect('localhost', 'user', 'pass', 'database');
+    $mysql = new MySquirrel('localhost', 'user', 'pass', 'database');
     $mysql->paranoid();
 
 Mark variables with a placeholder, and supply the values separately.
@@ -88,7 +87,7 @@ Use prepared statements to speed up identical queries.
 ### Differences from PDO
 
 The following points are not intended to suggest that MySquirrel is better than PDO.
-In fact, if PDO is available, you should probably use it instead of "hacks" such as MySquirrel.
+**In fact, if PDO is available, you should probably use it instead of "hacks" such as MySquirrel.**
 
   * Parameters can be passed as separate arguments or as an array. (PDO supports only the latter.)
   * Errors always generate an exception. (PDO can be configured to produce warnings instead.)
@@ -98,23 +97,11 @@ In fact, if PDO is available, you should probably use it instead of "hacks" such
 Reference Guide
 ===============
 
-The static method `MySquirrel::connect()` returns a `MySquirrelConnection_*` object,
-on which methods such as `query()` can be called.
-(The type of this object depends on whether or not MySQLi is available, but the API is the same.)
-Likewise, a query that has a result set (e.g. `SELECT`) returns a `MySquirrelResult_*` object,
-on which methods such as `fetch()` can be called.
-
-Errors will not pass unnoticed as they frequently do in legacy applications;
-rather, any error condition reported by the server will result in a `MySquirrelException` being thrown.
+Any error condition reported by the server will result in a `MySquirrelException` being thrown.
 
 ### MySquirrel class
 
-  * connect($host, $user, $pass, $database, [$charset] )
-
-### MySquirrelConnection class
-
-These methods should be called on the return value of `MySquirrel::connect()`.
-
+  * \_\_construct($host, $user, $pass, $database, [$charset] )
   * paranoid()                      _Activates paranoid mode (see below)_
   * prepare($querystring)
   * query($querystring, [$param1, $param2 ... ] )
