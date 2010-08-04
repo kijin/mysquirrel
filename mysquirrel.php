@@ -10,7 +10,7 @@
  * @copyright  (c) 2010, Kijin Sung <kijinbear@gmail.com>
  * @license    GPL v3 <http://www.opensource.org/licenses/gpl-3.0.html>
  * @link       http://github.com/kijin/mysquirrel
- * @version    0.2.7
+ * @version    0.3
  * 
  * -----------------------------------------------------------------------------
  * 
@@ -32,51 +32,7 @@
  * ----------------------------------------------------------------------------
  */
 
-class MySquirrel
-{
-    // Connect method.
-    
-    public static function connect($host, $user, $pass, $database, $charset = false)
-    {
-        // Check if the same connection object is already cached.
-        
-        $identifier = md5("$host $user $pass $database");
-        if (isset(self::$handles[$identifier]))
-        {
-            return self::$handles[$identifier];
-        }
-        
-        // Decide on the best driver to use, and instantiate it.
-        
-        elseif (extension_loaded('mysqli'))
-        {
-            return self::$handles[$identifier] = new MySquirrelConnection_MySQLi($host, $user, $pass, $database, $charset);
-        }
-        elseif (extension_loaded('mysql'))
-        {
-            return self::$handles[$identifier] = new MySquirrelConnection_MySQL($host, $user, $pass, $database, $charset);
-        }
-        else
-        {
-            throw new MySquirrelException('Your installation of PHP does not support MySQL connectivity.');
-        }
-    }
-    
-    // Database handles are cached here.
-    
-    protected static $handles = array();
-    
-    // Sequence generation method (for prepared statements).
-    
-    public static function sequence()
-    {
-        // PHP scripts are single-threaded, so this is good enough.
-        
-        static $val = 1;
-        return $val++;
-    }
-}
-
+define('MYSQUIRREL_VERSION', '0.3');
 
 /**
  * Connection drivers for various MySQL extensions.
@@ -85,7 +41,7 @@ class MySquirrel
  * methods. The user does not need to care which driver is in use.
  */
 
-abstract class MySquirrelConnection
+class MySquirrel
 {
     // Some protected properties.
     
@@ -102,6 +58,13 @@ abstract class MySquirrelConnection
     
     public function __construct($host, $user, $pass, $database, $charset = false)
     {
+        // Check if MySQL is available.
+        
+        if (!function_exists('mysql_connect'))
+        {
+            throw new MySquirrelException('Your installation of PHP does not support MySQL connectivity.');
+        }
+        
         // Store parameters as private properties.
         
         $this->host = $host;
@@ -109,6 +72,34 @@ abstract class MySquirrelConnection
         $this->pass = $pass;
         $this->database = $database;
         $this->charset = $charset;
+    }
+    
+    // Connect method.
+    
+    protected function connect()
+    {
+        // Connect.
+        
+        $this->connection = mysql_connect($this->host, $this->user, $this->pass);
+        if (!$this->connection) throw new MySquirrelException('Could not connect to ' . $this->host . '.');
+        
+        $select_db = mysql_select_db($this->database, $this->connection);
+        if (!$select_db) throw new MySquirrelException('Could not select database ' . $this->database . '.');
+        
+        // Select charset (only available in MySQL 5.0.7+).
+        
+        if ($this->charset !== false)
+        {
+            if (version_compare(PHP_VERSION, '5.2.3', '>='))
+            {
+                $select_charset = mysql_set_charset($this->charset, $this->connection);
+            }
+            else
+            {
+                $select_charset = mysql_query('SET NAMES ' . mysql_real_escape_string($this->charset, $this->connection), $this->connection);
+            }
+            if (!$select_charset) throw new MySquirrelException('Could not set charset to ' . $this->charset . '.');
+        }
     }
     
     // Paranoid method.
@@ -130,8 +121,7 @@ abstract class MySquirrelConnection
         
         // Instantiate and return a new prepared statement object.
         
-        $class = str_replace('Connection', 'PreparedStmt', get_class($this));
-        return new $class($this->connection, $querystring, $this->paranoid, $this->unmagic);
+        return new MySquirrelPreparedStmt($this->connection, $querystring, $this->paranoid, $this->unmagic);
     }
     
     // Query method.
@@ -211,161 +201,6 @@ abstract class MySquirrelConnection
         return $this->commonQuery($querystring);
     }
     
-    // Unmagic method.
-    
-    public function unmagic()
-    {
-        // If enabled, MySquirrel will automatically compensate for magic quotes.
-        
-        if (get_magic_quotes_gpc() || get_magic_quotes_runtime()) $this->unmagic = true;
-    }
-    
-    // Other methods.
-    
-    abstract protected function connect();
-    abstract protected function commonQuery($querystring);
-    abstract public function affectedRows();
-    abstract public function lastInsertID();
-    abstract public function beginTransaction();
-    abstract public function commit();
-    abstract public function rollback();
-}
-
-// MySquirrel Connection Driver for MySQLi.
-
-class MySquirrelConnection_MySQLi extends MySquirrelConnection
-{
-    // Connect method.
-    
-    protected function connect()
-    {
-        // Connect.
-        
-        $this->connection = new MySQLi($this->host, $this->user, $this->pass);
-        if (mysqli_connect_errno()) throw new MySquirrelException('Could not connect to ' . $this->host . ': ' . mysqli_connect_error());
-        
-        $select_db = $this->connection->select_db($this->database);
-        if (!$select_db) throw new MySquirrelException('Could not select database ' . $this->database . '.');
-        
-        // Select charset.
-        
-        if ($this->charset !== false)
-        {
-            $select_charset = $this->connection->set_charset($this->charset);
-            if (!$select_charset) throw new MySquirrelException('Could not set charset to ' . $this->charset . '.');
-        }
-    }
-    
-    // Common query method.
-    
-    protected function commonQuery($querystring)
-    {
-        // Query, and handle errors.
-        
-        $result = $this->connection->query($querystring);
-        if ($error = mysqli_errno($this->connection))
-        {
-            throw new MySquirrelException('Error ' . $error . ': ' . mysqli_error($this->connection));
-        }
-        
-        // Return the result.
-        
-        return (is_bool($result)) ? $result : new MySquirrelResult_MySQLi($result);
-    }
-    
-    // Number of affected rows.
-    
-    public function affectedRows()
-    {
-        return $this->connection->affected_rows();
-    }
-    
-    // Last insert ID.
-    
-    public function lastInsertID()
-    {
-        return $this->connection->insert_id();
-    }
-    
-    // Begin transaction.
-    
-    public function beginTransaction()
-    {
-        // Lazy connecting.
-        
-        if ($this->connection === false) $this->connect();
-        
-        // Turn off autocommit.
-        
-        $success = $this->connection->autocommit(false);
-        if ($error = mysqli_errno($this->connection))
-        {
-            throw new MySquirrelException('Error ' . $error . ': ' . mysqli_error($this->connection));
-        }
-        return $success;
-    }
-    
-    // Commit transaction.
-    
-    public function commit()
-    {
-        // There's a method to do that.
-        
-        $success = $this->connection->commit();
-        if ($error = mysqli_errno($this->connection))
-        {
-            throw new MySquirrelException('Error ' . $error . ': ' . mysqli_error($this->connection));
-        }
-        return $success;
-    }
-    
-    // Roll back transaction.
-    
-    public function rollback()
-    {
-        // There's a method to do that.
-        
-        $success = $this->connection->rollback();
-        if ($error = mysqli_errno($this->connection))
-        {
-            throw new MySquirrelException('Error ' . $error . ': ' . mysqli_error($this->connection));
-        }
-        return $success;
-    }
-}
-
-// MySquirrel driver for MySQL_* functions.
-
-class MySquirrelConnection_MySQL extends MySquirrelConnection
-{
-    // Connect method.
-    
-    protected function connect()
-    {
-        // Connect.
-        
-        $this->connection = mysql_connect($this->host, $this->user, $this->pass);
-        if (!$this->connection) throw new MySquirrelException('Could not connect to ' . $this->host . '.');
-        
-        $select_db = mysql_select_db($this->database, $this->connection);
-        if (!$select_db) throw new MySquirrelException('Could not select database ' . $this->database . '.');
-        
-        // Select charset (only available in MySQL 5.0.7+).
-        
-        if ($this->charset !== false)
-        {
-            if (version_compare(PHP_VERSION, '5.2.3', '>='))
-            {
-                $select_charset = mysql_set_charset($this->charset, $this->connection);
-            }
-            else
-            {
-                $select_charset = mysql_query('SET NAMES ' . mysql_real_escape_string($this->charset, $this->connection), $this->connection);
-            }
-            if (!$select_charset) throw new MySquirrelException('Could not set charset to ' . $this->charset . '.');
-        }
-    }
-    
     // Common query method.
     
     protected function commonQuery($querystring)
@@ -380,7 +215,7 @@ class MySquirrelConnection_MySQL extends MySquirrelConnection
         
         // Return the result.
         
-        return (is_bool($result)) ? $result : new MySquirrelResult_MySQL($result);
+        return (is_bool($result)) ? $result : new MySquirrelResult($result);
     }
     
     // Number of affected rows.
@@ -427,17 +262,35 @@ class MySquirrelConnection_MySQL extends MySquirrelConnection
         
         return $this->commonQuery('ROLLBACK');
     }
+    
+    // Unmagic method.
+    
+    public function unmagic()
+    {
+        // If enabled, MySquirrel will automatically compensate for magic quotes.
+        
+        if (get_magic_quotes_gpc() || get_magic_quotes_runtime()) $this->unmagic = true;
+    }
+    
+    // Sequence generation method for prepared statements.
+    
+    public static function nextSequence()
+    {
+        // PHP scripts are single-threaded, so this is good enough.
+        
+        static $val = 1;
+        return $val++;
+    }
 }
 
 
 /**
- * Prepared statement classes various MySQL extensions.
+ * Prepared statement class.
  * 
- * Regardless of the underlying extension, all drivers expose the same public
- * methods. The user does not need to care which driver is in use.
+ * This class is instantiated and returned when MySquirrel->prepare() is called.
  */
 
-abstract class MySquirrelPreparedStmt
+class MySquirrelPreparedStmt
 {
     // Information about the current statement.
     
@@ -474,7 +327,7 @@ abstract class MySquirrelPreparedStmt
         
         // Create a name for this prepared statement.
         
-        $this->statement = 'mysquirrel' . MySquirrel::sequence();
+        $this->statement = 'mysquirrel' . MySquirrel::nextSequence();
         
         // Count the number of placeholders.
         
@@ -482,7 +335,7 @@ abstract class MySquirrelPreparedStmt
         
         // Prepare the statement.
         
-        $this->realPrepare();
+        $this->realQuery('PREPARE ' . $this->statement . ' FROM \'' . mysql_real_escape_string($this->querystring, $this->connection) . '\'');
     }
     
     // Execute method.
@@ -531,60 +384,6 @@ abstract class MySquirrelPreparedStmt
         return $this->realQuery($querystring);
     }
     
-    // Destructor.
-    
-    public function __destruct()
-    {
-        // Deallocate the statement.
-        
-        $this->realQuery('DEALLOCATE PREPARE ' . $this->statement);
-    }
-}
-
-// MySquirrel prepared statement class for MySQLi.
-
-class MySquirrelPreparedStmt_MySQLi extends MySquirrelPreparedStmt
-{
-    // Real prepare method.
-    
-    protected function realPrepare()
-    {
-        // TODO: use native MySQLi support for prepared statements.
-        
-        $this->realQuery('PREPARE ' . $this->statement . ' FROM \'' . $this->connection->real_escape_string($this->querystring) . '\'');
-    }
-    
-    // Real query method.
-    
-    protected function realQuery($querystring)
-    {
-        // Query, and handle errors.
-        
-        $result = $this->connection->query($querystring);
-        if ($error = mysqli_errno($this->connection))
-        {
-            throw new MySquirrelException('Error ' . $error . ': ' . mysqli_error($this->connection));
-        }    
-        
-        // Return the result.
-        
-        return (is_bool($result)) ? $result : new MySquirrelResult_MySQLi($result);
-    }
-}
-
-// MySquirrel prepared statement class for MySQL_* functions.
-
-class MySquirrelPreparedStmt_MySQL extends MySquirrelPreparedStmt
-{
-    // Real prepare method.
-    
-    protected function realPrepare()
-    {
-        // TODO: use native MySQLi support for prepared statements.
-        
-        $this->realQuery('PREPARE ' . $this->statement . ' FROM \'' . mysql_real_escape_string($this->querystring, $this->connection) . '\'');
-    }
-    
     // Real query method.
     
     protected function realQuery($querystring)
@@ -599,22 +398,28 @@ class MySquirrelPreparedStmt_MySQL extends MySquirrelPreparedStmt
         
         // Return the result.
         
-        return (is_bool($result)) ? $result : new MySquirrelResult_MySQL($result);
+        return (is_bool($result)) ? $result : new MySquirrelResult($result);
+    }
+    
+    // Destructor.
+    
+    public function __destruct()
+    {
+        // Deallocate the statement.
+        
+        $this->realQuery('DEALLOCATE PREPARE ' . $this->statement);
     }
 }
 
 
 /**
- * Result classes for various MySQL extensions.
+ * Result class.
  * 
- * Regardless of the underlying extension, all result classes expose the same
- * public methods. The user does not need to care which driver is in use.
- * One exception is the fieldInfo() method which, when using MySQLi, may return
- * more than the minumal set of values returned by MySQL. If portability is a
- * concern, do not rely on these extra values.
+ * This class is instantiated and returned when a query has a result set.
+ * This is usually the case with SELECT queries.
  */
 
-abstract class MySquirrelResult implements Iterator
+class MySquirrelResult implements Iterator
 {
     // Constructor.
     
@@ -633,9 +438,14 @@ abstract class MySquirrelResult implements Iterator
     
     public function rewind()
     {
+        // Reset the counter.
+        
         $this->iter_count = $this->numRows();
         $this->iter_index = 0;
-        $this->seekToTop();
+        
+        // Seek to the top.
+        
+        if (mysql_num_rows($this->result) > 0) mysql_data_seek($this->result, 0);
     }
     
     // Iterator: Valid.
@@ -664,119 +474,6 @@ abstract class MySquirrelResult implements Iterator
     public function next()
     {
         // iter_index is already incremented by fetchAssoc().
-    }
-    
-    // Other methods.
-    
-    abstract protected function seekToTop();
-    abstract public function fetch();
-    abstract public function fetchAssoc();
-    abstract public function fetchObject($class_name = false, $params = array());
-    abstract public function fetchRow();
-    abstract public function fetchAll();
-    abstract public function fieldInfo($offset);
-    abstract public function numFields();
-    abstract public function numRows();
-}
-
-// MySquirrel result class for MySQLi.
-
-class MySquirrelResult_MySQLi extends MySquirrelResult
-{
-    // Seek to Top.
-    
-    protected function seekToTop()
-    {
-        if (mysqli_num_rows($this->result) > 0) $this->result->data_seek(0);
-    }
-    
-    // Fetch method (generic).
-    
-    public function fetch()
-    {
-        $this->iter_index++;
-        return $this->result->fetch_array(MYSQLI_BOTH);
-    }
-
-    // Fetch method (returns associated array).
-    
-    public function fetchAssoc()
-    {
-        $this->iter_index++;
-        return $this->result->fetch_assoc();
-    }
-    
-    // Fetch method (returns object).
-    
-    public function fetchObject($class_name = false, $params = array())
-    {
-        $this->iter_index++;
-        return $class_name ? $this->result->fetch_object($class_name, $params) : $this->result->fetch_object();
-    }
-    
-    // Fetch method (returns enumerated array).
-    
-    public function fetchRow()
-    {
-        $this->iter_index++;
-        return $this->result->fetch_row();
-    }
-    
-    // Fetch-all method.
-    
-    public function fetchAll()
-    {
-        if (version_compare(PHP_VERSION, '5.3.0', '>='))
-        {
-            return $this->result->fetch_all(MYSQLI_BOTH);
-        }
-        else
-        {
-            $return = array();
-            $this->seekToTop();
-            while ($row = $this->result->fetch_array(MYSQLI_BOTH)) $return[] = $row;
-            return $return;
-        }
-    }
-    
-    // Get field info.
-    
-    public function fieldInfo($offset)
-    {
-        return (array)$this->result->fetch_field_direct($offset);
-    }
-    
-    // Number of fields.
-    
-    public function numFields()
-    {
-        return mysqli_num_fields($this->result);
-    }
-    
-    // Number of rows.
-    
-    public function numRows()
-    {
-        return mysqli_num_rows($this->result);
-    }
-    
-    // Destructor.
-    
-    public function __destruct()
-    {
-        return $this->result->free();
-    }
-}
-
-// MySquirrel result class for MySQL_* functions.
-
-class MySquirrelResult_MySQL extends MySquirrelResult
-{
-    // Seek to Top.
-    
-    protected function seekToTop()
-    {
-        if (mysql_num_rows($this->result) > 0) mysql_data_seek($this->result, 0);
     }
     
     // Fetch method (generic).
