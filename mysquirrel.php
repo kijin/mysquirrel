@@ -74,9 +74,18 @@ class MySquirrel
         $this->charset = $charset;
     }
     
+    // Static connect method for 0.2 compatibility.
+    
+    public static function connect($host, $user, $pass, $database, $charset = false)
+    {
+        // This is how 0.2 used to do stuff.
+        
+        return new MySquirrel($host, $user, $pass, $database, $charset);
+    }
+    
     // Connect method.
     
-    protected function connect()
+    protected function lazyConnect()
     {
         // Connect.
         
@@ -117,7 +126,7 @@ class MySquirrel
     {
         // Lazy connecting.
         
-        if ($this->connection === false) $this->connect();
+        if ($this->connection === false) $this->lazyConnect();
         
         // Instantiate and return a new prepared statement object.
         
@@ -130,7 +139,7 @@ class MySquirrel
     {
         // Lazy connecting.
         
-        if ($this->connection === false) $this->connect();
+        if ($this->connection === false) $this->lazyConnect();
         
         // Refuse to execute multiple statements at the same time.
         
@@ -190,7 +199,7 @@ class MySquirrel
     {
         // Lazy connecting.
         
-        if ($this->connection === false) $this->connect();
+        if ($this->connection === false) $this->lazyConnect();
         
         // Not in paranoid mode.
         
@@ -222,6 +231,12 @@ class MySquirrel
     
     public function affectedRows()
     {
+        // Not useful unless connected.
+        
+        if ($this->connection === false) return false;
+        
+        // Return.
+        
         return mysql_affected_rows($this->connection);
     }
     
@@ -229,6 +244,12 @@ class MySquirrel
     
     public function lastInsertID()
     {
+        // Not useful unless connected.
+        
+        if ($this->connection === false) return false;
+        
+        // Return.
+        
         return mysql_insert_id($this->connection);
     }
     
@@ -238,7 +259,7 @@ class MySquirrel
     {
         // Lazy connecting.
         
-        if ($this->connection === false) $this->connect();
+        if ($this->connection === false) $this->lazyConnect();
         
         // No native support, so we just fire off a literal query.
         
@@ -249,6 +270,10 @@ class MySquirrel
     
     public function commit()
     {
+        // Can't commit when not connected.
+        
+        if ($this->connection === false) throw new MySquirrelException('Can\'t commit: No transaction is currently in progress.');
+        
         // No native support, so we just fire off a literal query.
         
         return $this->commonQuery('COMMIT');
@@ -258,6 +283,10 @@ class MySquirrel
     
     public function rollback()
     {
+        // Can't rollback when not connected.
+        
+        if ($this->connection === false) throw new MySquirrelException('Can\'t rollback: No transaction is currently in progress.');
+        
         // No native support, so we just fire off a literal query.
         
         return $this->commonQuery('ROLLBACK');
