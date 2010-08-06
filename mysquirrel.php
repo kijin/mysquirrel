@@ -10,7 +10,7 @@
  * @copyright  (c) 2010, Kijin Sung <kijinbear@gmail.com>
  * @license    GPL v3 <http://www.opensource.org/licenses/gpl-3.0.html>
  * @link       http://github.com/kijin/mysquirrel
- * @version    0.3
+ * @version    0.3.1
  * 
  * -----------------------------------------------------------------------------
  * 
@@ -32,7 +32,7 @@
  * ----------------------------------------------------------------------------
  */
 
-define('MYSQUIRREL_VERSION', '0.3');
+define('MYSQUIRREL_VERSION', '0.3.1');
 
 /**
  * Connection drivers for various MySQL extensions.
@@ -174,7 +174,7 @@ class MySquirrel
             else
             {
                 if ($this->unmagic) $param = stripslashes($param);
-                $queryparts[$i] .= "'" . $this->connection->real_escape_string($param) . "'";
+                $queryparts[$i] .= "'" . mysql_real_escape_string($param, $this->connection) . "'";
             }
         }
         $querystring = implode('', $queryparts);
@@ -365,7 +365,7 @@ class MySquirrelPreparedStmt
             if (!is_numeric($param))
             {
                 if ($this->unmagic) $param = stripslashes($param);
-                $param = "'" . $this->connection->real_escape_string($param) . "'";
+                $param = "'" . mysql_real_escape_string($param, $this->connection) . "'";
             }
             $varname = '@' . $this->statement . '_v' . $i;
             $this->realQuery('SET ' . $varname . ' = ' . $param);
