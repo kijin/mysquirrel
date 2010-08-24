@@ -35,10 +35,10 @@
 define('MYSQUIRREL_VERSION', '0.3.1');
 
 /**
- * Connection drivers for various MySQL extensions.
+ * MySquirrel main class.
  * 
- * Regardless of the underlying extension, all drivers expose the same public
- * methods. The user does not need to care which driver is in use.
+ * Instantiate this class to obtain a MySQL connection. This should be your main
+ * gateway to all communications with the server.
  */
 
 class MySquirrel
@@ -83,7 +83,7 @@ class MySquirrel
         return new MySquirrel($host, $user, $pass, $database, $charset);
     }
     
-    // Connect method.
+    // Lazy connect method.
     
     protected function lazyConnect()
     {
