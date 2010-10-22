@@ -10,7 +10,7 @@
  * @copyright  (c) 2010, Kijin Sung <kijinbear@gmail.com>
  * @license    GPL v3 <http://www.opensource.org/licenses/gpl-3.0.html>
  * @link       http://github.com/kijin/mysquirrel
- * @version    0.3.1
+ * @version    0.3.2
  * 
  * -----------------------------------------------------------------------------
  * 
@@ -32,7 +32,7 @@
  * ----------------------------------------------------------------------------
  */
 
-define('MYSQUIRREL_VERSION', '0.3.1');
+define('MYSQUIRREL_VERSION', '0.3.2');
 
 /**
  * MySquirrel main class.
@@ -533,7 +533,7 @@ class MySquirrelResult implements Iterator
     public function fetchAll()
     {
         $return = array();
-        $this->seekToTop();
+        $this->rewind();
         while ($row = mysql_fetch_array($this->result, MYSQL_BOTH)) $return[] = $row;
         return $return;
     }
