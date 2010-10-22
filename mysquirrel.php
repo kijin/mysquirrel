@@ -176,15 +176,8 @@ class MySquirrel
         for ($i = 0; $i < $count; $i++)
         {
             $param = $params[$i];
-            if (is_numeric($param))
-            {
-                $queryparts[$i] .= $param;
-            }
-            else
-            {
-                if ($this->unmagic) $param = stripslashes($param);
-                $queryparts[$i] .= "'" . mysql_real_escape_string($param, $this->connection) . "'";
-            }
+            if ($this->unmagic) $param = stripslashes($param);
+            $queryparts[$i] .= "'" . mysql_real_escape_string($param, $this->connection) . "'";
         }
         $querystring = implode('', $queryparts);
         
@@ -391,11 +384,9 @@ class MySquirrelPreparedStmt
         for ($i = 0; $i < $count; $i++)
         {
             $param = $params[$i];
-            if (!is_numeric($param))
-            {
-                if ($this->unmagic) $param = stripslashes($param);
-                $param = "'" . mysql_real_escape_string($param, $this->connection) . "'";
-            }
+            if ($this->unmagic) $param = stripslashes($param);
+            $param = "'" . mysql_real_escape_string($param, $this->connection) . "'";
+            
             $varname = '@' . $this->statement . '_v' . $i;
             $this->realQuery('SET ' . $varname . ' = ' . $param);
             if ($i == 0)
