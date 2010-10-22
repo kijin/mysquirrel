@@ -10,7 +10,7 @@
  * @copyright  (c) 2010, Kijin Sung <kijinbear@gmail.com>
  * @license    GPL v3 <http://www.opensource.org/licenses/gpl-3.0.html>
  * @link       http://github.com/kijin/mysquirrel
- * @version    0.3.2
+ * @version    0.3.3
  * 
  * -----------------------------------------------------------------------------
  * 
@@ -32,7 +32,7 @@
  * ----------------------------------------------------------------------------
  */
 
-define('MYSQUIRREL_VERSION', '0.3.2');
+define('MYSQUIRREL_VERSION', '0.3.3');
 
 /**
  * MySquirrel main class.
@@ -62,7 +62,7 @@ class MySquirrel
         
         if (!function_exists('mysql_connect'))
         {
-            throw new MySquirrelException_ConnectionError('Your installation of PHP does not support MySQL connectivity.');
+            throw new MySquirrelException('Your installation of PHP does not support MySQL connectivity.');
         }
         
         // Store parameters as private properties.
@@ -99,7 +99,7 @@ class MySquirrel
         
         if ($this->charset !== false)
         {
-            if (version_compare(PHP_VERSION, '5.2.3', '>='))
+            if (function_exists('mysql_set_charset'))
             {
                 $select_charset = mysql_set_charset($this->charset, $this->connection);
             }
@@ -146,14 +146,14 @@ class MySquirrel
         $querystring = trim($querystring, " \t\r\n;");
         if (strpos($querystring, ';') !== false)
         {
-            throw new MySquirrelException_MultipleStatementsError('You are not allowed to execute multiple statements at once.');
+            throw new MySquirrelException_MultipleStatementsError('You cannot make multiple queries at once. Please use rawQuery() instead.');
         }
         
         // If in paranoid mode, refuse to execute querystrings with quotes in them.
         
         if ($this->paranoid && (strpos($querystring, '\'') !== false || strpos($querystring, '"') !== false || strpos($querystring, '--') !== false))
         {
-            throw new MySquirrelException_ParanoidModeError('While in paranoid mode, you cannot use querystrings with quotes or comments in them.');
+            throw new MySquirrelException_ParanoidModeError('While in paranoid mode, you cannot use queries with quotes or comments in them.');
         }
         
         // Get all parameters.
@@ -167,7 +167,7 @@ class MySquirrel
         $count = substr_count($querystring, '?');
         if ($count !== count($params))
         {
-            throw new MySquirrelException_ParameterMismatchError('Querystring has ' . $count . ' placeholders, but ' . count($params) . ' parameters given.');
+            throw new MySquirrelException_ParameterMismatchError('Query has ' . $count . ' placeholders, but ' . count($params) . ' parameters given.');
         }
         
         // Replace all placeholders with properly escaped parameter values.
@@ -256,7 +256,14 @@ class MySquirrel
         
         // No native support, so we just fire off a literal query.
         
-        return $this->commonQuery('BEGIN');
+        try
+        {
+            return $this->commonQuery('BEGIN');
+        }
+        catch (MySquirrelException $e)
+        {
+            throw new MySquirrelException_TransactionError('Can\'t begin: ' . $e->getMessage());
+        }
     }
     
     // Commit transaction.
@@ -269,7 +276,14 @@ class MySquirrel
         
         // No native support, so we just fire off a literal query.
         
-        return $this->commonQuery('COMMIT');
+        try
+        {
+            return $this->commonQuery('COMMIT');
+        }
+        catch (MySquirrelException $e)
+        {
+            throw new MySquirrelException_TransactionError('Can\'t commit: ' . $e->getMessage());
+        }
     }
     
     // Roll back transaction.
@@ -282,7 +296,15 @@ class MySquirrel
         
         // No native support, so we just fire off a literal query.
         
-        return $this->commonQuery('ROLLBACK');
+        
+        try
+        {
+            return $this->commonQuery('ROLLBACK');
+        }
+        catch (MySquirrelException $e)
+        {
+            throw new MySquirrelException_TransactionError('Can\'t rollback: ' . $e->getMessage());
+        }
     }
     
     // Unmagic method.
@@ -337,14 +359,14 @@ class MySquirrelPreparedStmt
         $querystring = trim($querystring, " \t\r\n;");
         if (strpos($querystring, ';') !== false)
         {
-            throw new MySquirrelException_MultipleStatementsError('You are not allowed to prepare multiple statements at once.');
+            throw new MySquirrelException_MultipleStatementsError('You cannot prepare multiple statements at once.');
         }
         
         // If in paranoid mode, refuse to execute querystrings with quotes in them.
         
         if ($paranoid && (strpos($querystring, '\'') !== false || strpos($querystring, '"') !== false || strpos($querystring, '--') !== false))
         {
-            throw new MySquirrelException_ParanoidModeError('While in paranoid mode, you cannot use querystrings with quotes or comments in them.');
+            throw new MySquirrelException_ParanoidModeError('While in paranoid mode, you cannot use queries with quotes or comments in them.');
         }
         
         // Create a name for this prepared statement.
