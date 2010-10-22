@@ -15,7 +15,7 @@ $mysql->paranoid();
 // This is how you query the database.
 
 $result = $mysql->query('SELECT * FROM users WHERE id = ?', $id);
-while ($row = $result->fetch()){
+foreach ($result as $row) {
     echo $row['name'];
 }
 
@@ -28,7 +28,7 @@ $mysql->query('UPDATE users SET email = ? WHERE id = ?', $new_email, $id);
 $mysql->query('INSERT INTO users (name, password, email) VALUES (?, ?, ?)', $name, $password, $email);
 $id = $mysql->lastInsertID();
 
-// Use prepared statements for extra security and performance gains.
+// Use prepared statements for extra security and possible performance gains.
 
 $stmt = $mysql->prepare('INSERT INTO users (name, password, email) VALUES (?, ?, ?)');
 $stmt->execute($name, $password, $email);

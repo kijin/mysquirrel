@@ -62,7 +62,7 @@ class MySquirrel
         
         if (!function_exists('mysql_connect'))
         {
-            throw new MySquirrelException('Your installation of PHP does not support MySQL connectivity.');
+            throw new MySquirrelException_ConnectionError('Your installation of PHP does not support MySQL connectivity.');
         }
         
         // Store parameters as private properties.
@@ -90,10 +90,10 @@ class MySquirrel
         // Connect.
         
         $this->connection = mysql_connect($this->host, $this->user, $this->pass);
-        if (!$this->connection) throw new MySquirrelException('Could not connect to ' . $this->host . '.');
+        if (!$this->connection) throw new MySquirrelException_ConnectionError('Could not connect to ' . $this->host . '.');
         
         $select_db = mysql_select_db($this->database, $this->connection);
-        if (!$select_db) throw new MySquirrelException('Could not select database ' . $this->database . '.');
+        if (!$select_db) throw new MySquirrelException_ConnectionError('Could not select database ' . $this->database . '.');
         
         // Select charset (only available in MySQL 5.0.7+).
         
@@ -107,7 +107,7 @@ class MySquirrel
             {
                 $select_charset = mysql_query('SET NAMES ' . mysql_real_escape_string($this->charset, $this->connection), $this->connection);
             }
-            if (!$select_charset) throw new MySquirrelException('Could not set charset to ' . $this->charset . '.');
+            if (!$select_charset) throw new MySquirrelException_ConnectionError('Could not set charset to ' . $this->charset . '.');
         }
     }
     
@@ -146,14 +146,14 @@ class MySquirrel
         $querystring = trim($querystring, " \t\r\n;");
         if (strpos($querystring, ';') !== false)
         {
-            throw new MySquirrelException('You are not allowed to execute multiple statements at once.');
+            throw new MySquirrelException_MultipleStatementsError('You are not allowed to execute multiple statements at once.');
         }
         
         // If in paranoid mode, refuse to execute querystrings with quotes in them.
         
         if ($this->paranoid && (strpos($querystring, '\'') !== false || strpos($querystring, '"') !== false || strpos($querystring, '--') !== false))
         {
-            throw new MySquirrelException('While in paranoid mode, you cannot use querystrings with quotes or comments in them.');
+            throw new MySquirrelException_ParanoidModeError('While in paranoid mode, you cannot use querystrings with quotes or comments in them.');
         }
         
         // Get all parameters.
@@ -167,7 +167,7 @@ class MySquirrel
         $count = substr_count($querystring, '?');
         if ($count !== count($params))
         {
-            throw new MySquirrelException('Querystring has ' . $count . ' placeholders, but ' . count($params) . ' parameters given.');
+            throw new MySquirrelException_ParameterMismatchError('Querystring has ' . $count . ' placeholders, but ' . count($params) . ' parameters given.');
         }
         
         // Replace all placeholders with properly escaped parameter values.
@@ -196,7 +196,7 @@ class MySquirrel
         
         // Not in paranoid mode.
         
-        if ($this->paranoid) throw new MySquirrelException('rawQuery() is disabled in paranoid mode.');
+        if ($this->paranoid) throw new MySquirrelException_ParanoidModeError('rawQuery() is disabled in paranoid mode.');
         
         // Just query.
         
@@ -265,7 +265,7 @@ class MySquirrel
     {
         // Can't commit when not connected.
         
-        if ($this->connection === false) throw new MySquirrelException('Can\'t commit: No transaction is currently in progress.');
+        if ($this->connection === false) throw new MySquirrelException_TransactionError('Can\'t commit: No transaction is currently in progress.');
         
         // No native support, so we just fire off a literal query.
         
@@ -278,7 +278,7 @@ class MySquirrel
     {
         // Can't rollback when not connected.
         
-        if ($this->connection === false) throw new MySquirrelException('Can\'t rollback: No transaction is currently in progress.');
+        if ($this->connection === false) throw new MySquirrelException_TransactionError('Can\'t rollback: No transaction is currently in progress.');
         
         // No native support, so we just fire off a literal query.
         
@@ -337,14 +337,14 @@ class MySquirrelPreparedStmt
         $querystring = trim($querystring, " \t\r\n;");
         if (strpos($querystring, ';') !== false)
         {
-            throw new MySquirrelException('You are not allowed to execute multiple statements at once.');
+            throw new MySquirrelException_MultipleStatementsError('You are not allowed to prepare multiple statements at once.');
         }
         
         // If in paranoid mode, refuse to execute querystrings with quotes in them.
         
         if ($paranoid && (strpos($querystring, '\'') !== false || strpos($querystring, '"') !== false || strpos($querystring, '--') !== false))
         {
-            throw new MySquirrelException('While in paranoid mode, you cannot use querystrings with quotes or comments in them.');
+            throw new MySquirrelException_ParanoidModeError('While in paranoid mode, you cannot use querystrings with quotes or comments in them.');
         }
         
         // Create a name for this prepared statement.
@@ -372,7 +372,7 @@ class MySquirrelPreparedStmt
         
         if ($count !== $this->numargs)
         {
-            throw new MySquirrelException('Prepared statement has ' . $this->numargs . ' placeholders, but ' . $count . ' parameters given.');
+            throw new MySquirrelException_ParameterMismatchError('Prepared statement has ' . $this->numargs . ' placeholders, but ' . $count . ' parameters given.');
         }
         
         // Initialize the execute querystring.
@@ -575,13 +575,15 @@ class MySquirrelResult implements Iterator
 
 
 /**
- * MySquirrel exception class.
+ * MySquirrel exceptions.
  * 
  * No error passes silently. If your code is lousy, you'll see a lot of these.
  * It is your responsibility to handle these exceptions in an appropriate way.
  */
 
-class MySquirrelException extends Exception
-{
-    
-}
+class MySquirrelException extends Exception { }
+class MySquirrelException_ConnectionError extends MySquirrelException { }
+class MySquirrelException_MultipleStatementsError extends MySquirrelException { }
+class MySquirrelException_ParanoidModeError extends MySquirrelException { }
+class MySquirrelException_ParameterMismatchError extends MySquirrelException { }
+class MySquirrelException_TransactionError extends MySquirrelException { }
