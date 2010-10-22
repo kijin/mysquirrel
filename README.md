@@ -18,12 +18,12 @@ No more tedious escaping, no more SQL injection vulnerabilities.
 
 MySquirrel is released under the [GNU General Public License, version 3](http://www.gnu.org/licenses/gpl.html).
 
-### What's wrong with `mysql_query()` ?
+### What's wrong with mysql\_query?
 
 Good old `mysql_*` functions are among the most commonly used in PHP web development,
 but they are rather difficult to protect against [SQL injection](http://en.wikipedia.org/wiki/Sql_injection) attacks.
 Injection-proofing often involves tedious escaping, and PHP supplies no less than three functions
-with convoluted names for this purpose: `stripslashes` (deprecated), `mysql_escape_string` (also deprecated),
+with convoluted names for this purpose: `addslashes` (deprecated), `mysql_escape_string` (also deprecated),
 and `mysql_real_escape_string` ([recommended](http://ca2.php.net/manual/en/function.mysql-real-escape-string.php)).
 You are supposed to apply this function to each and every variable that you use in your query,
 all the while accounting for the quirks introduced by abominations such as magic quotes.
@@ -97,7 +97,7 @@ The following points are not intended to suggest that MySquirrel is better than 
 Reference Guide
 ===============
 
-Any error condition reported by the server will result in a `MySquirrelException` being thrown.
+Any error condition reported by the server will result in a `MySquirrelException` (or one of its subclasses) being thrown.
 
 ### MySquirrel class
 
@@ -202,7 +202,7 @@ call `paranoid()` immediately after obtaining the connection object.
 
 ### Undoing Magic Quotes
 
-If your server has magic quotes enabled (*which is not a good idea, but sometimes you can't help*),
+If your server has magic quotes enabled (*which is not a good idea, but sometimes your web host forces you to use it*),
 and if most of the parameters you're going to use come from potentially insecure sources (GET, POST, etc),
 you can call `unmagic()` to tell MySquirrel to compensate for magic quotes
 and prevent extraneous backslashes from being inserted.
@@ -213,19 +213,7 @@ but incorrect use may cause some strings to be inserted incorrectly.
 
 Unlike `mysql_*` functions, MySquirrel will not allow errors to pass silently.
 Nor will it follow the dickheaded practice of just `die()`ing on any database error.
-*If any error occurs, `MySquirrelException` will be thrown*.
+*If any error occurs, an exception will be thrown. If you don't catch it, your script will halt right there.*
 It is your responsibility to catch and handle this exception properly.
 Often, `mysql_*` doesn't even issue a warning when you try to execute SQL statements with syntax erorrs!
 This recklessness must come to an end, and MySquirrel goes to great lengths to remedy the situation where possible.
-
-### Connection Caching
-
-MySquirrel does not support persistent connections, but it does cache connection objects while a script is running.
-If you lose reference to the object you were working with (e.g. you move to a different scope),
-just call `MySquirrel::connect()` again with the same parameters to retrieve it.
-Paranoid mode, if previously activated, will remain activated.
-
-One limitation of this functionality is that you can't open two connections
-to the same database using the same username/password combination.
-However, web applications very rarely do this anyway, so you most likely won't have to worry about this.
-
