@@ -6,15 +6,15 @@
  * -----------------------------------------------------------------------------
  * 
  * @package    MySquirrel
- * @author     Kijin Sung <kijinbear@gmail.com>
- * @copyright  (c) 2010, Kijin Sung <kijinbear@gmail.com>
+ * @author     Kijin Sung <kijin.sung@gmail.com>
+ * @copyright  (c) 2010, Kijin Sung <kijin.sung@gmail.com>
  * @license    GPL v3 <http://www.opensource.org/licenses/gpl-3.0.html>
  * @link       http://github.com/kijin/mysquirrel
  * @version    0.3.3
  * 
  * -----------------------------------------------------------------------------
  * 
- * Copyright (c) 2010, Kijin Sung <kijinbear@gmail.com>
+ * Copyright (c) 2010, Kijin Sung <kijin.sung@gmail.com>
  * 
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the Free
