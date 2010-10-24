@@ -12,7 +12,7 @@ The only prerequisites are PHP 5.1+ and a reasonably up-to-date version of MySQL
 
 MySquirrel makes it super easy to run **parametrized queries** and **prepared statements**,
 and otherwise mimics PDO's behavior, while requiring nothing more than good old `mysql_*` functions.
-MySquirrel can also be used in **paranoid mode**, which enables additional security measures.
+MySquirrel can also be used in **paranoid mode**, which will try to prevent you from writing potentially insecure queries.
 All variables marked with `?` and passed as separate parameters are automatically escaped.
 No more tedious escaping, no more SQL injection vulnerabilities.
 
@@ -59,7 +59,7 @@ Mark variables with a placeholder, and supply the values separately.
         echo $row['name'];
     }
 
-The result class implements the Iterator interface, so you can also do this.
+The result class implements the `Iterator` interface, so you can also do this.
 
     $result = $mysql->query('SELECT * FROM users WHERE id = ?', $id);
     foreach ($result as $row) {
@@ -139,14 +139,14 @@ Notes on Best Practice
 Never, ever put variables into the querystring, e.g. `WHERE id = $id AND name = '$name'`.
 Script kiddies and other criminals love you for mixing variables with SQL!
 Instead, put a question mark (`?`) where you would normally put a variable.
-*Do not put quotes around it.* Just pretend that the question mark is part of the SQL syntax.
-Then supply the variable itself as an additional argument when you call `query()`, as in the examples above.
+**Do not put quotes around it.** Just pretend that the question mark is part of the SQL syntax.
+Then supply the variable itself as an additional parameter when you call `query()`, as in the examples above.
 
-You can supply as many variables as you want in this way,
-but *the number of additional arguments must match the number of placeholders*.
+You can supply as many parameters as you want in this way,
+but **the number of parameters must match the number of placeholders.**
 The same rule applies when you pass variables as a single array.
-MySquirrel will automatically escape all parameters supplied using this syntax;
-there is no need to pre-escape them in any way.
+MySquirrel will automatically escape all parameters supplied using this syntax,
+so there is no need to pre-escape them in any way.
 
 ### One Statement at a Time
 
@@ -154,14 +154,14 @@ Notice that `query()` will not accept querystrings that contain multiple SQL sta
 Only one statement is permitted per method call.
 This helps prevent malicious folks from attaching `DELETE` or similar to your querystring.
 
-A somewhat inconvenient side effect of this rule is that *you cannot run queries that contain semicolons*.
+A somewhat inconvenient side effect of this rule is that **you cannot run queries that contain semicolons.**
 You cannot even have semicolons inside string literals.
 String literals containing semicolons should be passed as separate parameters instead.
 In practice, most string literals come from insecure sources,
 so it is often a good idea to pass them as separate parameters anyway.
 Paranoid mode, explained below, actually makes this practice mandatory.
 
-Another side effect is that *you cannot run multiple statements at the same time*.
+Another side effect is that **you cannot run multiple statements at the same time.**
 Nor is it possible to run statements that contain other statements, such as
 many forms of `CREATE PROCEDURE`. If you need to execute several statements at the same time,
 or if you need to run statements that contain other statements, use `rawQuery()` instead.
@@ -192,17 +192,17 @@ Although string literals are not necessarily insecure, in practice,
 a lot of these originate from untrusted sources and result in vulnerabilities.
 Likewise, comments and null bytes in short queries are a common sign of injection attacks.
 
+**Paranoid mode is intended to be a debugging device, whose purpose is to help you identify potentially insecure queries.**
 Paranoid mode is not perfectly secure, and cannot be, since it uses blacklisting instead of whitelisting.
-This shortcoming is by design; the purpose is to disable only the most obvious attack vectors.
+This shortcoming is by design; the purpose is to flag and disable only the most obvious attack vectors.
 The additional security offered by paranoid mode should **not** be relied upon as the sole barrier against injection attacks.
 
 For compatibility reasons, paranoid mode is **not** activated by default.
-If you want additional security and you don't care about the minor limitations posed by it,
-call `paranoid()` immediately after obtaining the connection object.
+To activate, call `paranoid()` immediately after obtaining the connection object.
 
 ### Undoing Magic Quotes
 
-If your server has magic quotes enabled (*which is not a good idea, but sometimes your web host forces you to use it*),
+If your server has magic quotes enabled (_which is not a good idea, but sometimes your web host forces you to use it_),
 and if most of the parameters you're going to use come from potentially insecure sources (GET, POST, etc),
 you can call `unmagic()` to tell MySquirrel to compensate for magic quotes
 and prevent extraneous backslashes from being inserted.
@@ -213,7 +213,7 @@ but incorrect use may cause some strings to be inserted incorrectly.
 
 Unlike `mysql_*` functions, MySquirrel will not allow errors to pass silently.
 Nor will it follow the dickheaded practice of just `die()`ing on any database error.
-*If any error occurs, an exception will be thrown. If you don't catch it, your script will halt right there.*
+**If any error occurs, an exception will be thrown. If you don't catch it, your script will halt right there.**
 It is your responsibility to catch and handle this exception properly.
 Often, `mysql_*` doesn't even issue a warning when you try to execute SQL statements with syntax erorrs!
 This recklessness must come to an end, and MySquirrel goes to great lengths to remedy the situation where possible.
