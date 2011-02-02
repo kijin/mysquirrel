@@ -52,7 +52,6 @@ class MySquirrel
     protected $charset;
     protected $connection = false;
     protected $paranoid = false;
-    protected $unmagic = false;
     
     // Constructor.
     
@@ -130,7 +129,7 @@ class MySquirrel
         
         // Instantiate and return a new prepared statement object.
         
-        return new MySquirrelPreparedStmt($this->connection, $querystring, $this->paranoid, $this->unmagic);
+        return new MySquirrelPreparedStmt($this->connection, $querystring, $this->paranoid);
     }
     
     // Query method.
@@ -176,7 +175,6 @@ class MySquirrel
         for ($i = 0; $i < $count; $i++)
         {
             $param = $params[$i];
-            if ($this->unmagic) $param = stripslashes($param);
             $queryparts[$i] .= "'" . mysql_real_escape_string($param, $this->connection) . "'";
         }
         $querystring = implode('', $queryparts);
@@ -307,15 +305,6 @@ class MySquirrel
         }
     }
     
-    // Unmagic method.
-    
-    public function unmagic()
-    {
-        // If enabled, MySquirrel will automatically compensate for magic quotes.
-        
-        if (get_magic_quotes_gpc() || get_magic_quotes_runtime()) $this->unmagic = true;
-    }
-    
     // Sequence generation method for prepared statements.
     
     public static function nextSequence()
@@ -342,17 +331,15 @@ class MySquirrelPreparedStmt
     protected $querystring;
     protected $statement;
     protected $numargs;
-    protected $unmagic;
     
     // Constructor.
     
-    public function __construct($connection, $querystring, $paranoid, $unmagic)
+    public function __construct($connection, $querystring, $paranoid)
     {
         // Store the arguments in the instance.
         
         $this->connection = $connection;
         $this->querystring = $querystring;
-        $this->unmagic = $unmagic;
         
         // Refuse to execute multiple statements at the same time.
         
@@ -406,7 +393,6 @@ class MySquirrelPreparedStmt
         for ($i = 0; $i < $count; $i++)
         {
             $param = $params[$i];
-            if ($this->unmagic) $param = stripslashes($param);
             $param = "'" . mysql_real_escape_string($param, $this->connection) . "'";
             
             $varname = '@' . $this->statement . '_v' . $i;

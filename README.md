@@ -111,7 +111,6 @@ Any error condition reported by the server will result in a `MySquirrelException
   * beginTransaction()              _Only with InnoDB_
   * commit()                        _Only with InnoDB_
   * rollback()                      _Only with InnoDB_
-  * unmagic()                       _If enabled, compensate for evil magic quotes_
 
 ### MySquirrelPreparedStmt class
 
@@ -199,15 +198,6 @@ The additional security offered by paranoid mode should **not** be relied upon a
 
 For compatibility reasons, paranoid mode is **not** activated by default.
 To activate, call `paranoid()` immediately after obtaining the connection object.
-
-### Undoing Magic Quotes
-
-If your server has magic quotes enabled (_which is not a good idea, but sometimes your web host forces you to use it_),
-and if most of the parameters you're going to use come from potentially insecure sources (GET, POST, etc),
-you can call `unmagic()` to tell MySquirrel to compensate for magic quotes
-and prevent extraneous backslashes from being inserted.
-Compensating for magic quotes has no implications for security whatsoever,
-but incorrect use may cause some strings to be inserted incorrectly.
 
 ### Error Handling
 
