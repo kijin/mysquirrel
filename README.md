@@ -16,7 +16,7 @@ MySquirrel can also be used in **paranoid mode**, which will try to prevent you 
 All variables marked with `?` and passed as separate parameters are automatically escaped.
 No more tedious escaping, no more SQL injection vulnerabilities.
 
-MySquirrel is released under the [GNU General Public License, version 3](http://www.gnu.org/licenses/gpl.html).
+MySquirrel is released under the [GNU Lesser General Public License, version 3](http://www.gnu.org/copyleft/lesser.html).
 
 ### What's wrong with mysql\_query?
 
