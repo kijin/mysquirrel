@@ -10,7 +10,7 @@
  * @copyright  (c) 2010, Kijin Sung <kijin.sung@gmail.com>
  * @license    GPL v3 <http://www.opensource.org/licenses/gpl-3.0.html>
  * @link       http://github.com/kijin/mysquirrel
- * @version    0.3.3
+ * @version    0.3.4
  * 
  * -----------------------------------------------------------------------------
  * 
@@ -31,8 +31,6 @@
  * 
  * ----------------------------------------------------------------------------
  */
-
-define('MYSQUIRREL_VERSION', '0.3.3');
 
 /**
  * MySquirrel main class.
@@ -94,7 +92,7 @@ class MySquirrel
         $select_db = mysql_select_db($this->database, $this->connection);
         if (!$select_db) throw new MySquirrelException_ConnectionError('Could not select database ' . $this->database . '.');
         
-        // Select charset (only available in MySQL 5.0.7+).
+        // Select charset. (This requires MySQL 5.0.7+ and PHP 5.2.3+)
         
         if ($this->charset !== false)
         {
@@ -104,9 +102,8 @@ class MySquirrel
             }
             else
             {
-                $select_charset = mysql_query('SET NAMES ' . mysql_real_escape_string($this->charset, $this->connection), $this->connection);
+                new MySquirrelException_CharacterSetError('Changing the character set requires MySQL 5.0.7 or higher, and PHP 5.2.3 or higher.');
             }
-            if (!$select_charset) throw new MySquirrelException_ConnectionError('Could not set charset to ' . $this->charset . '.');
         }
     }
     
@@ -591,6 +588,7 @@ class MySquirrelResult implements Iterator
 
 class MySquirrelException extends Exception { }
 class MySquirrelException_ConnectionError extends MySquirrelException { }
+class MySquirrelException_CharacterSetError extends MySquirrelException { }
 class MySquirrelException_MultipleStatementsError extends MySquirrelException { }
 class MySquirrelException_ParanoidModeError extends MySquirrelException { }
 class MySquirrelException_ParameterMismatchError extends MySquirrelException { }
