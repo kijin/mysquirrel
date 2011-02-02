@@ -10,7 +10,7 @@
  * @copyright  (c) 2010, Kijin Sung <kijin.sung@gmail.com>
  * @license    GPL v3 <http://www.opensource.org/licenses/gpl-3.0.html>
  * @link       http://github.com/kijin/mysquirrel
- * @version    0.3.4
+ * @version    0.3.5
  * 
  * -----------------------------------------------------------------------------
  * 
@@ -124,9 +124,24 @@ class MySquirrel
         
         if ($this->connection === false) $this->lazyConnect();
         
+        // Refuse to execute multiple statements at the same time.
+        
+        $querystring = trim($querystring, " \t\r\n;");
+        if (strpos($querystring, ';') !== false)
+        {
+            throw new MySquirrelException_MultipleStatementsError('You cannot prepare multiple statements at once.');
+        }
+        
+        // If in paranoid mode, refuse to execute querystrings with quotes in them.
+        
+        if ($this->paranoid && (strpos($querystring, '\'') !== false || strpos($querystring, '"') !== false || strpos($querystring, '--') !== false))
+        {
+            throw new MySquirrelException_ParanoidModeError('While in paranoid mode, you cannot use queries with quotes or comments in them.');
+        }
+        
         // Instantiate and return a new prepared statement object.
         
-        return new MySquirrelPreparedStmt($this->connection, $querystring, $this->paranoid);
+        return new MySquirrelPreparedStmt($this->connection, $querystring);
     }
     
     // Query method.
@@ -142,7 +157,7 @@ class MySquirrel
         $querystring = trim($querystring, " \t\r\n;");
         if (strpos($querystring, ';') !== false)
         {
-            throw new MySquirrelException_MultipleStatementsError('You cannot make multiple queries at once. Please use rawQuery() instead.');
+            throw new MySquirrelException_MultipleStatementsError('You cannot use query() to send multiple statements at once. Please use rawQuery() instead.');
         }
         
         // If in paranoid mode, refuse to execute querystrings with quotes in them.
@@ -338,38 +353,17 @@ class MySquirrelPreparedStmt
     
     // Constructor.
     
-    public function __construct($connection, $querystring, $paranoid)
+    public function __construct($connection, $querystring)
     {
         // Store the arguments in the instance.
         
         $this->connection = $connection;
         $this->querystring = $querystring;
-        
-        // Refuse to execute multiple statements at the same time.
-        
-        $querystring = trim($querystring, " \t\r\n;");
-        if (strpos($querystring, ';') !== false)
-        {
-            throw new MySquirrelException_MultipleStatementsError('You cannot prepare multiple statements at once.');
-        }
-        
-        // If in paranoid mode, refuse to execute querystrings with quotes in them.
-        
-        if ($paranoid && (strpos($querystring, '\'') !== false || strpos($querystring, '"') !== false || strpos($querystring, '--') !== false))
-        {
-            throw new MySquirrelException_ParanoidModeError('While in paranoid mode, you cannot use queries with quotes or comments in them.');
-        }
-        
-        // Create a name for this prepared statement.
-        
-        $this->statement = 'mysquirrel' . MySquirrel::nextSequence();
-        
-        // Count the number of placeholders.
-        
         $this->numargs = substr_count($querystring, '?');
         
         // Prepare the statement.
         
+        $this->statement = 'mysquirrel' . MySquirrel::nextSequence();
         $this->realQuery('PREPARE ' . $this->statement . ' FROM \'' . mysql_real_escape_string($this->querystring, $this->connection) . '\'');
     }
     
