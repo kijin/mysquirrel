@@ -10,7 +10,7 @@
  * @copyright  (c) 2010-2011, Kijin Sung <kijin.sung@gmail.com>
  * @license    LGPL v3 <http://www.gnu.org/copyleft/lesser.html>
  * @link       http://github.com/kijin/mysquirrel
- * @version    0.3.5
+ * @version    0.3.6
  * 
  * -----------------------------------------------------------------------------
  * 
@@ -324,14 +324,13 @@ class MySquirrel
         }
     }
     
-    // Sequence generation method for prepared statements.
+    // Generate a unique name to be used as a prepared statement name.
     
-    public static function nextSequence()
+    public static function genStatementName()
     {
-        // PHP scripts are single-threaded, so this is good enough.
+        // This should be unique enough for all practical purposes.
         
-        static $val = 1;
-        return $val++;
+        return 'ps_' . $sequence++ . '_' . substr(microtime(), 2, 6) . '_' . mt_rand(10000, 99999);
     }
 }
 
@@ -363,7 +362,7 @@ class MySquirrelPreparedStmt
         
         // Prepare the statement.
         
-        $this->statement = 'mysquirrel' . MySquirrel::nextSequence();
+        $this->statement = MySquirrel::genStatementName();
         $this->realQuery('PREPARE ' . $this->statement . ' FROM \'' . mysql_real_escape_string($this->querystring, $this->connection) . '\'');
     }
     
