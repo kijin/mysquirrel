@@ -10,7 +10,7 @@
  * @copyright  (c) 2010-2011, Kijin Sung <kijin.sung@gmail.com>
  * @license    LGPL v3 <http://www.gnu.org/copyleft/lesser.html>
  * @link       http://github.com/kijin/mysquirrel
- * @version    0.3.6
+ * @version    0.3.7
  * 
  * -----------------------------------------------------------------------------
  * 
@@ -330,7 +330,7 @@ class MySquirrel
     {
         // This should be unique enough for all practical purposes.
         
-        return 'ps_' . $sequence++ . '_' . substr(microtime(), 2, 6) . '_' . mt_rand(10000, 99999);
+        return 'ps_' . substr(microtime(), 2, 6) . '_' . mt_rand(10000, 99999);
     }
 }
 
