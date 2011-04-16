@@ -71,8 +71,6 @@ class MySquirrel
     
     public static function connect($host, $user, $pass, $database, $charset = false)
     {
-        // This is how 0.2 used to do stuff.
-        
         return new MySquirrel($host, $user, $pass, $database, $charset);
     }
     
@@ -110,8 +108,6 @@ class MySquirrel
     
     public function prepare($querystring)
     {
-        // Lazy connecting.
-        
         if ($this->connection === false) $this->lazyConnect();
         
         // Perform some basic checks.
@@ -135,8 +131,6 @@ class MySquirrel
     
     public function query($querystring /* and parameters */ )
     {
-        // Lazy connecting.
-        
         if ($this->connection === false) $this->lazyConnect();
         
         // Perform some basic checks.
@@ -156,9 +150,6 @@ class MySquirrel
         $params = func_get_args();
         array_shift($params);
         if (count($params) === 1 && is_array($params[0])) $params = $params[0];
-        
-        // Count the number of placeholders.
-        
         $count = substr_count($querystring, '?');
         if ($count !== count($params))
         {
@@ -191,16 +182,8 @@ class MySquirrel
     
     public function rawQuery($querystring)
     {
-        // Lazy connecting.
-        
         if ($this->connection === false) $this->lazyConnect();
-        
-        // This method is disabled in paranoid mode.
-        
         if ($this->paranoid) throw new MySquirrelException_ParanoidModeError('rawQuery() is disabled in paranoid mode.');
-        
-        // Just query.
-        
         return $this->commonQuery($querystring);
     }
     
@@ -208,16 +191,11 @@ class MySquirrel
     
     protected function commonQuery($querystring)
     {
-        // Query, and handle errors.
-        
         $result = mysql_query($querystring, $this->connection);
         if ($error = mysql_errno($this->connection))
         {
             throw new MySquirrelException('Error ' . $error . ': ' . mysql_error($this->connection));
         }
-        
-        // Return the result.
-        
         return (is_bool($result)) ? $result : new MySquirrelResult($result);
     }
     
@@ -225,12 +203,7 @@ class MySquirrel
     
     public function affectedRows()
     {
-        // Not useful unless connected.
-        
         if ($this->connection === false) return false;
-        
-        // Return.
-        
         return mysql_affected_rows($this->connection);
     }
     
@@ -238,12 +211,7 @@ class MySquirrel
     
     public function lastInsertID()
     {
-        // Not useful unless connected.
-        
         if ($this->connection === false) return false;
-        
-        // Return.
-        
         return mysql_insert_id($this->connection);
     }
     
@@ -251,11 +219,7 @@ class MySquirrel
     
     public function beginTransaction()
     {
-        // Lazy connecting.
-        
         if ($this->connection === false) $this->lazyConnect();
-        
-        // No native support, so we just fire off a literal query.
         
         try
         {
@@ -271,11 +235,7 @@ class MySquirrel
     
     public function commit()
     {
-        // Can't commit when not connected.
-        
         if ($this->connection === false) throw new MySquirrelException_TransactionError('Can\'t commit: No transaction is currently in progress.');
-        
-        // No native support, so we just fire off a literal query.
         
         try
         {
@@ -291,11 +251,7 @@ class MySquirrel
     
     public function rollback()
     {
-        // Can't rollback when not connected.
-        
         if ($this->connection === false) throw new MySquirrelException_TransactionError('Can\'t rollback: No transaction is currently in progress.');
-        
-        // No native support, so we just fire off a literal query.
         
         try
         {
@@ -311,8 +267,6 @@ class MySquirrel
     
     public static function genStatementName()
     {
-        // This should be unique enough for all practical purposes.
-        
         return 'ps_' . substr(microtime(), 2, 6) . '_' . mt_rand(10000, 99999);
     }
 }
@@ -337,13 +291,9 @@ class MySquirrelPreparedStmt
     
     public function __construct($connection, $querystring)
     {
-        // Store the arguments in the instance.
-        
         $this->connection = $connection;
         $this->querystring = $querystring;
         $this->numargs = substr_count($querystring, '?');
-        
-        // Prepare the statement.
         
         $this->statement = MySquirrel::genStatementName();
         $this->realQuery('PREPARE ' . $this->statement . ' FROM \'' . mysql_real_escape_string($this->querystring, $this->connection) . '\'');
@@ -358,7 +308,6 @@ class MySquirrelPreparedStmt
         $params = func_get_args();
         if (count($params) === 1 && is_array($params[0])) $params = $params[0];
         $count = count($params);
-        
         if ($count !== $this->numargs)
         {
             throw new MySquirrelException_ParameterMismatchError('Prepared statement has ' . $this->numargs . ' placeholders, but ' . $count . ' parameters given.');
@@ -399,16 +348,11 @@ class MySquirrelPreparedStmt
     
     protected function realQuery($querystring)
     {
-        // Query, and handle errors.
-        
         $result = mysql_query($querystring, $this->connection);
         if ($error = mysql_errno($this->connection))
         {
             throw new MySquirrelException('Error ' . $error . ': ' . mysql_error($this->connection));
         }
-        
-        // Return the result.
-        
         return (is_bool($result)) ? $result : new MySquirrelResult($result);
     }
     
@@ -416,8 +360,6 @@ class MySquirrelPreparedStmt
     
     public function __destruct()
     {
-        // Deallocate the statement.
-        
         $this->realQuery('DEALLOCATE PREPARE ' . $this->statement);
     }
 }
@@ -445,7 +387,7 @@ class MySquirrelResult implements Iterator
     protected $iter_count = false;
     protected $iter_index = false;
     
-    // Iterator: Rewind.
+    // Methods to implement the iterator interface.
     
     public function rewind()
     {
@@ -454,28 +396,20 @@ class MySquirrelResult implements Iterator
         if (mysql_num_rows($this->result) > 0) mysql_data_seek($this->result, 0);
     }
     
-    // Iterator: Valid.
-    
     public function valid()
     {
         return ($this->iter_index < $this->iter_count) ? true : false;
     }
-    
-    // Iterator: Current.
     
     public function current()
     {
         return $this->fetchAssoc();
     }
     
-    // Iterator: Key.
-    
     public function key()
     {
         return $this->iter_index - 1;
     }
-    
-    // Iterator: Next.
     
     public function next()
     {
