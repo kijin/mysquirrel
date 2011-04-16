@@ -55,14 +55,10 @@ class MySquirrel
     
     public function __construct($host, $user, $pass, $database, $charset = false)
     {
-        // Check if MySQL is available.
-        
         if (!function_exists('mysql_connect'))
         {
             throw new MySquirrelException('Your installation of PHP does not support MySQL connectivity.');
         }
-        
-        // Store parameters as private properties.
         
         $this->host = $host;
         $this->user = $user;
@@ -84,15 +80,11 @@ class MySquirrel
     
     protected function lazyConnect()
     {
-        // Connect.
-        
         $this->connection = mysql_connect($this->host, $this->user, $this->pass);
         if (!$this->connection) throw new MySquirrelException_ConnectionError('Could not connect to ' . $this->host . '.');
         
         $select_db = mysql_select_db($this->database, $this->connection);
         if (!$select_db) throw new MySquirrelException_ConnectionError('Could not select database ' . $this->database . '.');
-        
-        // Select charset. (This requires MySQL 5.0.7+ and PHP 5.2.3+)
         
         if ($this->charset !== false)
         {
@@ -107,13 +99,11 @@ class MySquirrel
         }
     }
     
-    // Paranoid method.
+    // Paranoid method. (Raw queries are disabled, and quotes and comments are not permitted.)
     
     public function paranoid()
     {
-        // When in paranoid mode, raw queries are disabled, and quotes in queries are not permitted.
-        
-        return $this->paranoid = true;
+        $this->paranoid = true;
     }
     
     // Prepare method.
@@ -124,16 +114,13 @@ class MySquirrel
         
         if ($this->connection === false) $this->lazyConnect();
         
-        // Refuse to execute multiple statements at the same time.
+        // Perform some basic checks.
         
         $querystring = trim($querystring, " \t\r\n;");
         if (strpos($querystring, ';') !== false)
         {
             throw new MySquirrelException_MultipleStatementsError('You cannot prepare multiple statements at once.');
         }
-        
-        // If in paranoid mode, refuse to execute querystrings with quotes in them.
-        
         if ($this->paranoid && (strpos($querystring, '\'') !== false || strpos($querystring, '"') !== false || strpos($querystring, '--') !== false))
         {
             throw new MySquirrelException_ParanoidModeError('While in paranoid mode, you cannot use queries with quotes or comments in them.');
@@ -152,16 +139,13 @@ class MySquirrel
         
         if ($this->connection === false) $this->lazyConnect();
         
-        // Refuse to execute multiple statements at the same time.
+        // Perform some basic checks.
         
         $querystring = trim($querystring, " \t\r\n;");
         if (strpos($querystring, ';') !== false)
         {
             throw new MySquirrelException_MultipleStatementsError('You cannot use query() to send multiple statements at once. Please use rawQuery() instead.');
         }
-        
-        // If in paranoid mode, refuse to execute querystrings with quotes in them.
-        
         if ($this->paranoid && (strpos($querystring, '\'') !== false || strpos($querystring, '"') !== false || strpos($querystring, '--') !== false))
         {
             throw new MySquirrelException_ParanoidModeError('While in paranoid mode, you cannot use queries with quotes or comments in them.');
@@ -211,7 +195,7 @@ class MySquirrel
         
         if ($this->connection === false) $this->lazyConnect();
         
-        // Not in paranoid mode.
+        // This method is disabled in paranoid mode.
         
         if ($this->paranoid) throw new MySquirrelException_ParanoidModeError('rawQuery() is disabled in paranoid mode.');
         
@@ -312,7 +296,6 @@ class MySquirrel
         if ($this->connection === false) throw new MySquirrelException_TransactionError('Can\'t rollback: No transaction is currently in progress.');
         
         // No native support, so we just fire off a literal query.
-        
         
         try
         {
@@ -466,13 +449,8 @@ class MySquirrelResult implements Iterator
     
     public function rewind()
     {
-        // Reset the counter.
-        
         $this->iter_count = $this->numRows();
         $this->iter_index = 0;
-        
-        // Seek to the top.
-        
         if (mysql_num_rows($this->result) > 0) mysql_data_seek($this->result, 0);
     }
     
