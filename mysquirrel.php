@@ -6,15 +6,15 @@
  * -----------------------------------------------------------------------------
  * 
  * @package    MySquirrel
- * @author     Kijin Sung <kijin.sung@gmail.com>
- * @copyright  (c) 2010-2011, Kijin Sung <kijin.sung@gmail.com>
+ * @author     Kijin Sung <kijin@kijinsung.com>
+ * @copyright  (c) 2010-2011, Kijin Sung <kijin@kijinsung.com>
  * @license    LGPL v3 <http://www.gnu.org/copyleft/lesser.html>
  * @link       http://github.com/kijin/mysquirrel
- * @version    0.3.7
+ * @version    0.3.8
  * 
  * -----------------------------------------------------------------------------
  * 
- * Copyright (c) 2010-2011, Kijin Sung <kijin.sung@gmail.com>
+ * Copyright (c) 2010-2013, Kijin Sung <kijin@kijinsung.com>
  * 
  * This program is free software: you can redistribute it and/or modify it
  * under the terms of the GNU Lesser General Public License as published by
@@ -32,6 +32,7 @@
  * ----------------------------------------------------------------------------
  */
 
+ 
 /**
  * MySquirrel main class.
  * 
@@ -84,15 +85,19 @@ class MySquirrel
         $select_db = mysql_select_db($this->database, $this->connection);
         if (!$select_db) throw new MySquirrelException_ConnectionError('Could not select database ' . $this->database . '.');
         
+        // Attempt to change the character set if necessary.
+        
         if ($this->charset !== false)
         {
             if (function_exists('mysql_set_charset'))
             {
                 $select_charset = mysql_set_charset($this->charset, $this->connection);
             }
-            else
+            elseif (mysql_client_encoding($this->connection) !== $this->charset)
             {
-                new MySquirrelException_CharacterSetError('Changing the character set requires MySQL 5.0.7 or higher, and PHP 5.2.3 or higher.');
+                $msg = 'Changing the character set requires MySQL 5.0.7 or higher, and PHP 5.2.3 or higher. ';
+                $msg .= 'Your database\'s default character set is ' . mysql_client_encoding($this->connection) . '.';
+                throw new MySquirrelException_CharacterSetError($msg);
             }
         }
     }
@@ -112,7 +117,7 @@ class MySquirrel
         
         // Perform some basic checks.
         
-        $querystring = trim($querystring, " \t\r\n;");
+        $querystring = trim($querystring);
         if (strpos($querystring, ';') !== false)
         {
             throw new MySquirrelException_MultipleStatementsError('You cannot prepare multiple statements at once.');
@@ -135,7 +140,7 @@ class MySquirrel
         
         // Perform some basic checks.
         
-        $querystring = trim($querystring, " \t\r\n;");
+        $querystring = trim($querystring);
         if (strpos($querystring, ';') !== false)
         {
             throw new MySquirrelException_MultipleStatementsError('You cannot use query() to send multiple statements at once. Please use rawQuery() instead.');
