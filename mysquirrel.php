@@ -7,7 +7,7 @@
  * 
  * @package    MySquirrel
  * @author     Kijin Sung <kijin@kijinsung.com>
- * @copyright  (c) 2010-2011, Kijin Sung <kijin@kijinsung.com>
+ * @copyright  (c) 2010-2013, Kijin Sung <kijin@kijinsung.com>
  * @license    LGPL v3 <http://www.gnu.org/copyleft/lesser.html>
  * @link       http://github.com/kijin/mysquirrel
  * @version    0.3.8
