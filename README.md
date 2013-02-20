@@ -6,7 +6,7 @@ The focus is on simplicity and ease of use, robust error handling, and most of a
 
 MySquirrel is designed with the **small-time web developer** in mind,
 whose projects often end up in the unpredictable and inconsistent world of **shared hosting**.
-MySquirrel does not require advanced database extensions such as PDO,
+MySquirrel does not require PHP extensions such as MySQLi and PDO (which some hosts still don't support),
 while bringing to you some of the major benefits of those newer interfaces.
 The only prerequisites are PHP 5.1+ and a reasonably up-to-date version of MySQL.
 
@@ -15,6 +15,10 @@ and otherwise mimics PDO's behavior, while requiring nothing more than good old 
 MySquirrel can also be used in **paranoid mode**, which will try to prevent you from writing potentially insecure queries.
 All variables marked with `?` and passed as separate parameters are automatically escaped.
 No more tedious escaping, no more SQL injection vulnerabilities.
+
+**Note:** The MySQL extension will be deprecated in PHP 5.5 and later.
+If you started using MySquirrel in an old project but your web host now supports MySQLi and/or PDO,
+you'd better update your code to use a better alternative!
 
 MySquirrel is released under the [GNU Lesser General Public License, version 3](http://www.gnu.org/copyleft/lesser.html).
 
@@ -87,7 +91,7 @@ Use prepared statements to speed up identical queries.
 ### Differences from PDO
 
 The following points are not intended to suggest that MySquirrel is better than PDO.
-**In fact, if PDO is available, you should probably use it instead of "hacks" such as MySquirrel.**
+In fact, if PDO is available, you should probably use it instead of "hacks" such as MySquirrel.
 
   * Parameters can be passed as separate arguments or as an array. (PDO supports only the latter.)
   * Errors always generate an exception. (PDO can be configured to produce warnings instead.)
